@@ -154,6 +154,12 @@ tr.watch td{background:var(--amber-lt)}
 <!-- KPI Cards -->
 <div class="kpi-grid" id="kpiGrid"></div>
 
+<!-- สรุปอัตรากำลัง แบบละเอียด (ยอดยกมา / Request New / Hold / ยอดสรรหา / รับใหม่ / โอนย้าย / คงเหลือ) -->
+<div class="card" id="summaryDetailCard" style="display:none;margin-bottom:14px">
+  <div class="card-title">🧾 สรุปอัตรากำลัง (ภาพรวมทั้งปี — ไม่ขึ้นกับ Filter ด้านบน)</div>
+  <div id="summaryDetailGrid" class="kpi-grid" style="margin-bottom:0"></div>
+</div>
+
 <!-- Row 2: Location Table + Type Pie -->
 <div class="row2" id="row2" style="display:none">
   <div class="card">
@@ -246,7 +252,7 @@ function loadUrl(){
 }
 
 // ── URL ตายตัว ────────────────────────────────────────────
-const FIXED_URL = "https://script.google.com/macros/s/AKfycbzBRoiT7GLEXvut-QQwMRoQaJ8KE_-8-B5p7Xk2XdW7NmqPjiEMF8-CRm60OWNMpb9rvg/exec";
+const FIXED_URL = "https://script.google.com/macros/s/AKfycbydFiqmp9L_wcIyC7sm1IAlDScFg3Yx8ke1_WZd0Fq2afJJaPcaSGpMG8h-nM_uk8N5hw/exec";
 
 // ── Fetch live data (ใช้ FIXED_URL) ──────────────────────
 async function loadData(){
@@ -324,7 +330,9 @@ function loadDemo(){
   RAW = {
     lastUpdate: new Date().toISOString(),
     kpi:{ totalHC:165, totalHired:117, totalVacancies:40, totalHold:4,
-          fillRate:70.9, avgDays:49.5, slaPct:56.3, slaCount:"89/158" },
+          fillRate:70.9, avgDays:49.5, slaPct:56.3, slaCount:"89/158",
+          carriedOverHC:20, newRequestHC:145, activeHC:161,
+          hiredNew:70, hiredInternal:47, hiredOther:0 },
     locationSummary:[
       {location:"เขตพื้นที่นนทบุรี",      hcReq:56, hired:38, vacancies:18, replRate:67.9, avgDays:51, status:"WATCH"},
       {location:"เขตพื้นที่ชลบุรี-ระยอง", hcReq:18, hired:16, vacancies:2,  replRate:88.9, avgDays:58, status:"OK"},
@@ -431,6 +439,7 @@ function renderAll(){
   if(!RAW) return;
   updateFilterBadges();
   renderKPI();
+  renderSummaryDetail();
   renderLocationTable();
   renderTypeChart();
   renderMonthlyChart();
@@ -542,6 +551,50 @@ function renderKPI(){
       <div class="kpi-sub"><span class="bdg ${badgeSLA}">${slaCount} รายการ</span></div>
     </div>
   `;
+}
+
+// ── สรุปอัตรากำลังแบบละเอียด (ยอดยกมา/Request New/รวม/Hold/ยอดสรรหา/รับใหม่/โอนย้าย/คงเหลือ) ──
+// ใช้ RAW.kpi เสมอ (ภาพรวมทั้งปี ไม่ขึ้นกับ filter Location/Type/Position ด้านบน
+// เพื่อให้ตรงกับหัวข้อสรุปที่ป้อนไว้: ยอดขอยกมา 38 / Request New 214 / รวม 252 / Hold 12 /
+// ยอดสรรหา 240 / รับใหม่ 36 / โอนย้ายภายใน 176 / คงเหลืออัตราว่าง 28)
+function renderSummaryDetail(){
+  const k = RAW.kpi || {};
+  const card = document.getElementById('summaryDetailCard');
+  const grid = document.getElementById('summaryDetailGrid');
+  if(!card || !grid) return;
+
+  // เผื่อข้อมูลเก่า (Demo ที่ยังไม่มีฟิลด์ใหม่) ไม่มีฟิลด์เหล่านี้ → ซ่อน card ไปเลย
+  const hasBreakdown = ('carriedOverHC' in k) || ('newRequestHC' in k) || ('activeHC' in k);
+  if(!hasBreakdown){ card.style.display='none'; return; }
+
+  card.style.display = 'block';
+
+  const carriedOverHC = k.carriedOverHC ?? 0;
+  const newRequestHC  = k.newRequestHC  ?? (k.totalHC - carriedOverHC);
+  const totalRequest  = k.totalHC ?? 0;
+  const totalHold     = k.totalHold ?? 0;
+  const activeHC      = k.activeHC ?? (totalRequest - totalHold);
+  const hiredNew      = k.hiredNew ?? 0;
+  const hiredInternal = k.hiredInternal ?? 0;
+  const remainVac      = k.totalVacancies ?? 0;
+
+  const item = (label, val, color, sub) => `
+    <div class="kpi" style="border-color:${color}">
+      <div class="kpi-label">${label}</div>
+      <div class="kpi-val" style="color:${color}">${val}</div>
+      ${sub ? `<div class="kpi-sub">${sub}</div>` : ''}
+    </div>`;
+
+  grid.innerHTML = [
+    item('① ยอดขอยกมา (1/1/2026)', carriedOverHC, 'var(--gray-dk)', 'HC Req. ที่ยกมาจากปีก่อน'),
+    item('② Request New', newRequestHC, 'var(--navy)', 'อัตราที่ขอใหม่ในปีนี้'),
+    item('③ รวม Request', totalRequest, 'var(--teal)', '① + ②'),
+    item('④ Hold', totalHold, 'var(--amber)', 'รอ Budget / ระงับชั่วคราว'),
+    item('⑤ ยอดสรรหา', activeHC, 'var(--teal-dk)', '③ − ④ (อัตราที่สรรหาจริง)'),
+    item('⑥ รับใหม่ (Hired)', hiredNew, 'var(--green)', 'Recruit Type = รับใหม่'),
+    item('⑦ โอนย้ายภายใน (Hired)', hiredInternal, 'var(--green)', 'Recruit Type = โอนย้าย/รับภายใน'),
+    item('⑧ คงเหลืออัตราว่าง', remainVac, 'var(--red)', '⑤ − ⑥ − ⑦')
+  ].join('');
 }
 
 // ── Location Table — group by location เสมอ (แถวเดียวต่อเขต) ──
