@@ -729,8 +729,21 @@ function renderFunnel(){
   const card = document.getElementById('funnelCard');
   if(!card) return;
   const f = RAW.funnel;
-  if(!f || f.error || !f.stages){ card.style.display='none'; return; }
+  if(!f || f.error || !f.stages){
+    const why = f && f.error ? ('Apps Script แจ้ง error: ' + f.error)
+      : 'ยังไม่พบข้อมูล Funnel จาก Apps Script — เกือบทุกครั้งเกิดจากยังไม่ได้วาง Code.gs ใหม่ แล้ว Deploy เป็น New version';
+    let m = document.getElementById('funnelMissing');
+    if(!m){ m = document.createElement('div'); m.id='funnelMissing'; m.className='card'; card.parentNode.insertBefore(m, card); }
+    card.style.display = 'none'; m.style.display = 'block';
+    m.innerHTML = '<div style="padding:24px;line-height:1.8"><h3 style="margin:0 0 8px">⚠️ หน้า Funnel ยังไม่มีข้อมูล</h3>'
+      + '<div>' + why + '</div>'
+      + '<ol style="margin:10px 0 0 18px"><li>เปิด Apps Script → วาง Code.gs ล่าสุดทับทั้งหมด → บันทึก</li>'
+      + '<li>Deploy → Manage deployments → ✏️ → Version: <b>New version</b> → Deploy</li>'
+      + '<li>กลับมากด Ctrl+F5 ที่หน้านี้</li></ol></div>';
+    return;
+  }
   card.style.display = 'block';
+  const mm = document.getElementById('funnelMissing'); if(mm) mm.style.display='none';
 
   const s = f.stages, pw = f.perWeek;
   const pct = (a,b) => b>0 ? Math.round(a/b*100) : 0;
