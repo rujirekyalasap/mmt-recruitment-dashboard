@@ -371,7 +371,7 @@ function loadUrl(){
 }
 
 // ── URL ตายตัว ────────────────────────────────────────────
-const FIXED_URL = "https://script.google.com/macros/s/AKfycbydFiqmp9L_wcIyC7sm1IAlDScFg3Yx8ke1_WZd0Fq2afJJaPcaSGpMG8h-nM_uk8N5hw/exec";
+const FIXED_URL = "https://script.google.com/macros/s/AKfycbyIOqIOSLRiZPINaMQepU7sDetGZ8QxaYbSEo8uHv2-NM8wul0CAflxD-jD1089msWS2Q/exec";
 
 // ── Fetch live data (ใช้ FIXED_URL) ──────────────────────
 async function loadData(){
@@ -949,7 +949,7 @@ function getWeeksElapsed(){
   if(RAW.weeklyFlow && RAW.weeklyFlow.weeksElapsed) return RAW.weeklyFlow.weeksElapsed;
   if(RAW.funnel && RAW.funnel.weeksElapsed) return RAW.funnel.weeksElapsed;
   const now = new Date(), j = new Date(now.getFullYear(),0,1);
-  return Math.max(1, ((now - j)/86400000 + 1)/7);
+  return Math.max(1, Math.round(((now - j)/86400000 + 1)/7));
 }
 const fmtRate = n => n<=0 ? '0' : n<0.1 ? '<0.1' : (Math.round(n*10)/10).toFixed(1);
 const clearWeeks = (vac, perWk) => vac<=0 ? '-' : perWk>0 ? '≈'+Math.max(1,Math.round(vac/perWk))+' สัปดาห์' : 'ยังไม่มีการจ้าง';
