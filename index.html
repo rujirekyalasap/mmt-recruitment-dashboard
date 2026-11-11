@@ -89,7 +89,51 @@ tr.watch td{background:var(--amber-lt)}
 .step-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
 .step-num{width:22px;height:22px;min-width:22px;border-radius:50%;background:var(--teal);
   color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
-@media(max-width:600px){.row2,.row3{grid-template-columns:1fr}.kpi-val{font-size:20px}}
+.fn-sub{font-size:11px;font-weight:600;color:var(--gray-dk);margin-bottom:8px}
+
+/* ── 3 หน้ารายงาน ── */
+.page{display:none}
+.page.active{display:block}
+.page-title{display:none}
+.page-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.ptab{font-family:inherit;font-size:12px;padding:8px 16px;border-radius:20px;border:1px solid #D1D5DB;
+  background:#fff;color:var(--gray-dk);cursor:pointer;font-weight:500}
+.ptab b{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;
+  background:#E5E7EB;color:var(--gray-dk);font-size:10px;margin-right:4px}
+.ptab.active{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600}
+.ptab.active b{background:#fff;color:var(--teal)}
+.ptab-print{margin-left:auto;border-color:var(--teal);color:var(--teal);font-weight:600}
+.vac-strip{background:linear-gradient(135deg,#FFF7F7,#FFFFFF);border:1px solid #FECACA;border-left:5px solid var(--red);
+  border-radius:var(--radius);padding:12px 14px;margin-bottom:12px}
+.vac-strip .vs-head{font-size:12px;font-weight:700;color:var(--red);margin-bottom:8px;display:flex;
+  justify-content:space-between;flex-wrap:wrap;gap:6px}
+.vac-tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.vac-tile{background:#fff;border-radius:8px;padding:8px 10px;border:1px solid #F3F4F6}
+.vac-tile .vl{font-size:10px;color:var(--gray)}
+.vac-tile .vv{font-size:20px;font-weight:700;line-height:1.25}
+.vac-tile.big{background:var(--red);border-color:var(--red)}
+.vac-tile.big .vl{color:#FECACA}.vac-tile.big .vv{color:#fff;font-size:26px}
+.vac-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.vac-chip{font-size:10px;padding:3px 9px;border-radius:20px;background:var(--red-lt);color:var(--red);font-weight:600}
+.vac-chip.zero{background:var(--green-lt);color:var(--green)}
+body.on-p3 #filterBar,body.on-p3 #filterBadges{display:none !important}
+@media(max-width:700px){.vac-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media print{
+  @page{size:A4 landscape;margin:7mm}
+  body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .page-tabs,.filter-bar,#filterBadges,.btn-refresh,#setupCard{display:none !important}
+  .page,.page.active{display:block !important;break-after:page;page-break-after:always;overflow:hidden}
+  #page3{break-after:auto;page-break-after:auto}
+  #page1{zoom:.56} #page2{zoom:.5} #page3{zoom:.56}
+  .page-title{display:block;font-size:16px;font-weight:700;color:var(--teal-dk);margin:0 0 8px;
+    border-bottom:2px solid var(--teal);padding-bottom:4px}
+  /* หน้า 1: ตัดตารางรายการยาวออกตอนพิมพ์ (บนจอยังเห็นครบ) */
+  #row4,#row5{display:none !important}
+  .card,.kpi,.vac-strip{box-shadow:none;border:1px solid #E5E7EB}
+  .kpi,.vac-strip{break-inside:avoid}
+  .main{max-width:none;padding:0}
+  .chart-wrap{height:150px}
+}
 </style>
 </head>
 <body>
@@ -151,13 +195,25 @@ tr.watch td{background:var(--amber-lt)}
 </div>
 <div id="filterBadges" style="display:none;padding:4px 14px 8px;gap:6px;flex-wrap:wrap"></div>
 
+<!-- 📑 เมนู 3 หน้ารายงาน -->
+<div class="page-tabs" id="pageTabs">
+  <button class="ptab active" id="tab1" onclick="showPage(1)"><b>1</b> ภาพรวม Overall</button>
+  <button class="ptab" id="tab2" onclick="showPage(2)"><b>2</b> ตำแหน่งหน้าสาขา & % วนรับ</button>
+  <button class="ptab" id="tab3" onclick="showPage(3)"><b>3</b> Funnel การสรรหา</button>
+  <button class="ptab ptab-print" onclick="window.print()">🖨️ พิมพ์ / บันทึก PDF (3 หน้า)</button>
+</div>
+
+<!-- ═════════ หน้า 1: ภาพรวม Overall (คงเดิม) ═════════ -->
+<div class="page active" id="page1">
+<div class="page-title">หน้า 1/3 — ภาพรวมการสรรหา (Overall)</div>
 <!-- KPI Cards -->
 <div class="kpi-grid" id="kpiGrid"></div>
 
 <!-- สรุปอัตรากำลัง แบบละเอียด (ยอดยกมา / Request New / Hold / ยอดสรรหา / รับใหม่ / โอนย้าย / คงเหลือ) -->
 <div class="card" id="summaryDetailCard" style="display:none;margin-bottom:14px">
   <div class="card-title">🧾 สรุปอัตรากำลัง (ภาพรวมทั้งปี — ไม่ขึ้นกับ Filter ด้านบน)</div>
-  <div id="summaryDetailGrid" class="kpi-grid" style="margin-bottom:0"></div>
+  <div id="summaryDetailGrid" class="kpi-grid kpi-grid-8" style="margin-bottom:0"></div>
+  <details id="reconcileBox" style="margin-top:10px;font-size:11px"></details>
 </div>
 
 <!-- Row 2: Location Table + Type Pie -->
@@ -167,9 +223,10 @@ tr.watch td{background:var(--amber-lt)}
     <table id="locationTable">
       <thead><tr>
         <th>พื้นที่/เขต/สถานที่</th><th style="text-align:right">เปิดรับ</th>
-        <th style="text-align:right">ทดแทน</th><th style="text-align:right">สรรหาสำเร็จ</th>
+        <th style="text-align:right" title="HC ประเภททดแทน (ลาออก + โอนย้าย)">ทดแทน</th><th style="text-align:right">สรรหาสำเร็จ</th>
         <th style="text-align:right">อัตราความสำเร็จ(%)</th>
-        <th style="text-align:right">ว่างอยู่</th><th style="text-align:right">Avg Days</th>
+        <th style="text-align:right" title="HC ที่ระงับชั่วคราว">Hold</th>
+        <th style="text-align:right" title="HC − Hold − สรรหาสำเร็จ">ว่างอยู่</th><th style="text-align:right">Avg Days</th>
         <th>สถานะ</th>
       </tr></thead>
       <tbody id="locationBody"></tbody>
@@ -233,6 +290,68 @@ tr.watch td{background:var(--amber-lt)}
     </div>
   </div>
 </div>
+
+</div><!-- /page1 -->
+
+<!-- ═════════ หน้า 2: ตำแหน่งงานหน้าสาขา ═════════ -->
+<div class="page" id="page2">
+<div class="page-title">หน้า 2/3 — ตำแหน่งงานหน้าสาขา แยกตามพื้นที่/BU & % วนรับ</div>
+<!-- 🏥 ตำแหน่งงานหน้าสาขา แยกตามพื้นที่/BU + % วนรับ -->
+<div class="card" id="posBranchCard" style="display:none;margin-bottom:14px">
+  <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <span>🏥 ตำแหน่งงานหน้าสาขา — แยกตามพื้นที่/BU & % วนรับ (สรรหาต่อเนื่อง)</span>
+    <span id="posScopeChips" style="display:flex;gap:6px"></span>
+  </div>
+  <div id="posVacStrip"></div>
+  <div id="posWeeklyBlock"></div>
+  <div id="posBranchNote"></div>
+  <div id="posInsights" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
+  <div style="overflow-x:auto"><table id="posBranchTable"></table></div>
+  <div class="card-title" style="margin:14px 0 8px">🗺️ แผนที่ความต้องการ: ตำแหน่ง × พื้นที่ <span style="font-weight:400;color:var(--gray)">(ตัวเลข = HC ที่ขอ · วงกลมแดง = อัตราที่ยังว่างอยู่ — รวมถึงแถว/คอลัมน์รวม)</span></div>
+  <div style="overflow-x:auto"><table id="posHeatTable"></table></div>
+  <p style="font-size:10px;color:var(--gray);margin-top:8px;line-height:1.6">
+    <b>% วนรับ</b> = HC ทดแทน (ลาออก + โอนย้าย) ÷ HC ทั้งหมดของตำแหน่งนั้น — ยิ่งสูง ยิ่งเป็นตำแหน่งที่ต้อง "เปิดรับต่อเนื่อง / มี Talent Pool สำรอง"<br>
+    <b>สัดส่วนงานสรรหา</b> = HC ของตำแหน่งนั้น ÷ HC รวมในขอบเขตที่เลือก &nbsp;|&nbsp; <b>Fill %</b> = Hired ÷ HC
+  </p>
+</div>
+
+</div><!-- /page2 -->
+
+<!-- ═════════ หน้า 3: Funnel ═════════ -->
+<div class="page" id="page3">
+<div class="page-title">หน้า 3/3 — Recruitment Funnel</div>
+<!-- 📈 Recruitment Funnel Report (CV → พรีสกรีน → สัมภาษณ์ → Offer) -->
+<div class="card" id="funnelCard" style="display:none;margin-bottom:14px">
+  <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:6px">
+    <span>📈 Recruitment Funnel — CV เข้า → พรีสกรีน → ส่งเขตสัมภาษณ์ → ผ่านสัมภาษณ์ → Offer</span>
+    <span id="funnelAsOf" style="font-weight:400;font-size:10px;color:var(--gray)"></span>
+  </div>
+  <div id="funVacStrip"></div>
+  <div id="funnelWeekKpi" class="kpi-grid kpi-grid-8" style="margin-bottom:12px"></div>
+  <div class="row3" style="margin-bottom:12px">
+    <div>
+      <p class="fn-sub">🔻 ภาพรวม Funnel (ทั้งปี)</p>
+      <div id="funnelBars"></div>
+    </div>
+    <div>
+      <p class="fn-sub">📅 จำนวนคนสัมภาษณ์รายสัปดาห์ (12 สัปดาห์ล่าสุด) <span style="font-weight:400;color:var(--gray)">— <span style="color:var(--green)">■</span> ผ่าน <span style="color:var(--red)">■</span> ไม่ผ่าน <span style="color:#9CA3AF">■</span> Hold/อื่นๆ</span></p>
+      <div id="funnelWeekly"></div>
+    </div>
+  </div>
+  <p class="fn-sub">👥 แยกตามกลุ่มตำแหน่ง</p>
+  <div style="overflow-x:auto;margin-bottom:12px"><table id="funnelGroupTable"></table></div>
+  <p class="fn-sub">📍 แยกตามเขต (ที่ส่งสัมภาษณ์)</p>
+  <div style="overflow-x:auto;margin-bottom:10px"><table id="funnelAreaTable"></table></div>
+  <div id="funnelInsights" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
+  <details id="funnelDQ" style="font-size:11px;color:var(--gray-dk)"></details>
+  <p style="font-size:10px;color:var(--gray);margin-top:8px;line-height:1.6">
+    <b>ผ่านพรีสกรีน = ส่งเขตสัมภาษณ์</b> เพราะผู้สมัครทุกคนใน Candidate_Data ผ่านพรีสกรีนก่อนส่งเขต ·
+    <b>CV เข้า</b> เป็นค่าประมาณ = ผ่านพรีสกรีน ÷ สัดส่วนผ่านคัด (ตั้งค่า <code>SCREEN_PASS_RATE</code> ใน Code.gs) ·
+    ทุกขั้นนับจาก Candidate_Data ตามวันสัมภาษณ์ของปีนี้ · ภาพรวมทั้งปี ไม่ขึ้นกับ Filter ด้านบน
+  </p>
+</div>
+
+</div><!-- /page3 -->
 
 </div><!-- /main -->
 
@@ -440,6 +559,9 @@ function renderAll(){
   updateFilterBadges();
   renderKPI();
   renderSummaryDetail();
+  renderReconcile();
+  renderFunnel();
+  renderPositionBranch();
   renderLocationTable();
   renderTypeChart();
   renderMonthlyChart();
@@ -597,6 +719,508 @@ function renderSummaryDetail(){
   ].join('');
 }
 
+// ═══════════════════════════════════════════════════════════
+// 🏥 ตำแหน่งงานหน้าสาขา แยกตามพื้นที่/BU + % วนรับ
+// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// 📈 Recruitment Funnel Report  (RAW.funnel จาก Apps Script)
+// ═══════════════════════════════════════════════════════════
+function renderFunnel(){
+  const card = document.getElementById('funnelCard');
+  if(!card) return;
+  const f = RAW.funnel;
+  if(!f || f.error || !f.stages){ card.style.display='none'; return; }
+  card.style.display = 'block';
+
+  const s = f.stages, pw = f.perWeek;
+  const pct = (a,b) => b>0 ? Math.round(a/b*100) : 0;
+  const rnd = n => Math.round(n);
+  renderFunVacStrip(f);
+  document.getElementById('funnelAsOf').textContent =
+    `ข้อมูลถึง ${f.asOf} · ผ่านมา ${f.weeksElapsed} สัปดาห์ของปี ${f.year}`;
+
+  // ── ตัวเลขต่อสัปดาห์ (กลมๆ) ──
+  const tile = (label, val, color, sub) => `
+    <div class="kpi" style="border-color:${color}">
+      <div class="kpi-label">${label}</div>
+      <div class="kpi-val" style="color:${color}">${val}</div>
+      <div class="kpi-sub">${sub}</div></div>`;
+  document.getElementById('funnelWeekKpi').innerHTML = [
+    tile('📥 CV เข้า / สัปดาห์ (ประมาณ)', '~'+rnd(pw.cvInEst), 'var(--navy)', `~${s.cvInEst} ราย · ประมาณจาก ผ่านพรีสกรีน ÷ ${Math.round(f.screenPassRate*100)}%`),
+    tile('🔎 ผ่านพรีสกรีน → ส่งเขต / สัปดาห์', '~'+rnd(pw.interviewed), 'var(--amber)', `รวม ${s.interviewed} ราย · 8 สัปดาห์ล่าสุด ~${rnd(pw.last8Interviewed)}/สัปดาห์`),
+    tile('✅ ผ่านสัมภาษณ์ / สัปดาห์', '~'+rnd(pw.pass), 'var(--green)', `ผ่าน ${s.pass}/${s.interviewed} = ${pct(s.pass,s.interviewed)}%`),
+    tile('🤝 รับ Offer / สัปดาห์', '~'+rnd(pw.accepted), 'var(--teal-dk)', `รับ ${s.accepted}/${s.offers} Offer = ${pct(s.accepted,s.offers)}%`)
+  ].join('');
+
+  // ── Funnel bars ──
+  const maxV = Math.max(s.cvInEst, s.interviewed, 1);
+  const frow = (label, v, note, color) => `
+    <div class="bar-row">
+      <div class="bar-label" style="min-width:150px">${label}</div>
+      <div class="bar-track" style="height:14px"><div class="bar-fill" style="width:${Math.max(2,Math.round(v/maxV*100))}%;background:${color}"></div></div>
+      <div style="font-size:10px;min-width:96px;text-align:right"><b>${v}</b> <span style="color:var(--gray)">${note}</span></div>
+    </div>`;
+  document.getElementById('funnelBars').innerHTML =
+    frow('📥 CV เข้า (ประมาณ)', s.cvInEst, '~ประมาณการ', '#94A3B8') +
+    `<div style="font-size:9px;color:var(--gray);margin:6px 0 4px;border-top:1px dashed #D1D5DB;padding-top:4px">นับจริงจาก Candidate_Data (ตามวันสัมภาษณ์)</div>` +
+    frow('🔎 ผ่านพรีสกรีน = ส่งเขตสัมภาษณ์', s.interviewed, `(${pct(s.interviewed,s.cvInEst)}%)`, 'var(--amber)') +
+    frow('✅ ผ่านสัมภาษณ์', s.pass, `(${pct(s.pass,s.interviewed)}%)`, 'var(--green)') +
+    frow('📨 ได้รับ Offer', s.offers, `(${pct(s.offers,s.pass)}% ของผู้ผ่าน)`, '#0EA5E9') +
+    frow('🤝 รับ Offer (ที่บันทึกไว้)', s.accepted, `(${pct(s.accepted,s.offers)}% ของ Offer)`, 'var(--teal-dk)') +
+    ((RAW.kpi && RAW.kpi.totalHired != null) ?
+      `<div style="font-size:9px;color:var(--gray);margin:6px 0 4px;border-top:1px dashed #D1D5DB;padding-top:4px">เข้างานจริงทั้งบริษัท (Recruitment_Status — ตัวเลขเดียวกับหน้า 1-2)</div>` +
+      frow('🏁 Hired (เข้างานจริง)', RAW.kpi.totalHired, `รับใหม่ ${RAW.kpi.hiredNew||0} + ภายใน ${RAW.kpi.hiredInternal||0}`, 'var(--teal)') : '');
+
+  // ── รายสัปดาห์ ──
+  const maxW = Math.max(1, ...f.weekly.map(w=>w.interviewed));
+  document.getElementById('funnelWeekly').innerHTML = f.weekly.map(w=>{
+    const oth = Math.max(0, w.interviewed - w.pass - w.fail);
+    const seg = (n,c) => n>0 ? `<div style="width:${n/maxW*100}%;background:${c};height:100%"></div>` : '';
+    return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+      <span style="font-size:9px;color:var(--gray);min-width:34px">${w.weekStart}</span>
+      <div style="flex:1;height:11px;background:#F3F4F6;border-radius:3px;overflow:hidden;display:flex">
+        ${seg(w.pass,'var(--green)')}${seg(w.fail,'var(--red)')}${seg(oth,'#9CA3AF')}</div>
+      <span style="font-size:10px;min-width:20px;text-align:right;font-weight:600">${w.interviewed}</span></div>`;
+  }).join('');
+
+  // ── ตารางตามกลุ่มตำแหน่ง ──
+  const pcell = (p, good, warn) => {
+    const c = p>=good ? 'var(--green)' : p>=warn ? 'var(--amber)' : 'var(--red)';
+    return `<td style="text-align:right;font-weight:700;color:${c}">${p}%</td>`;
+  };
+  document.getElementById('funnelGroupTable').innerHTML = `
+    <thead><tr><th>กลุ่มตำแหน่ง</th><th style="text-align:right">CV เข้า (ประมาณ)</th>
+      <th style="text-align:right">ผ่านพรีสกรีน = ส่งเขตสัมภาษณ์</th><th style="text-align:right">ผ่านสัมภาษณ์</th>
+      <th style="text-align:right">% ผ่านสัมภาษณ์</th><th style="text-align:right">Offer</th><th style="text-align:right">รับ Offer</th>
+      <th style="text-align:right">% รับ Offer</th></tr></thead><tbody>
+    ${f.byGroup.map(g=>{
+      const small = g.interviewed < 10;
+      return `<tr><td><b>${g.group}</b>${small?' <span class="bdg" style="background:#F3F4F6;color:var(--gray)" title="บันทึกใน Candidate_Data น้อยกว่า 10 ราย / อาจบันทึกไม่ครบ">ตัวอย่างน้อย</span>':''}</td>
+        <td style="text-align:right;color:var(--gray)">~${g.cvInEst}</td>
+        <td style="text-align:right">${g.interviewed}</td><td style="text-align:right;color:var(--green);font-weight:600">${g.pass}</td>
+        ${pcell(pct(g.pass,g.interviewed),50,35)}
+        <td style="text-align:right">${g.offers}</td><td style="text-align:right">${g.accepted}</td>
+        ${pcell(pct(g.accepted,g.offers),60,40)}</tr>`;
+    }).join('')}
+    <tr style="background:var(--gray-lt);font-weight:700"><td>รวม</td>
+      <td style="text-align:right;color:var(--gray)">~${s.cvInEst}</td>
+      <td style="text-align:right">${s.interviewed}</td><td style="text-align:right">${s.pass}</td>${pcell(pct(s.pass,s.interviewed),50,35)}
+      <td style="text-align:right">${s.offers}</td><td style="text-align:right">${s.accepted}</td>${pcell(pct(s.accepted,s.offers),60,40)}</tr></tbody>`;
+
+  // ── ตารางตามเขต ──
+  document.getElementById('funnelAreaTable').innerHTML = `
+    <thead><tr><th>เขต / พื้นที่</th><th style="text-align:right">ส่งสัมภาษณ์</th><th style="text-align:right">ผ่าน</th>
+      <th style="text-align:right">% ผ่านสัมภาษณ์</th><th style="text-align:right">Offer</th><th style="text-align:right">รับ Offer</th>
+      <th style="text-align:right">% รับ Offer</th></tr></thead><tbody>
+    ${f.byArea.filter(a=>a.interviewed>=3).map(a=>`<tr><td><b>${a.area}</b></td>
+      <td style="text-align:right">${a.interviewed}</td><td style="text-align:right;color:var(--green);font-weight:600">${a.pass}</td>
+      ${pcell(pct(a.pass,a.interviewed),50,35)}
+      <td style="text-align:right">${a.offers}</td><td style="text-align:right">${a.accepted}</td>
+      ${pcell(pct(a.accepted,a.offers),60,40)}</tr>`).join('')}</tbody>`;
+
+  // ── Insight ──
+  const chip = (bg, fg, txt) => `<span style="background:${bg};color:${fg};font-size:11px;padding:4px 10px;border-radius:20px;font-weight:600">${txt}</span>`;
+  const ins = [];
+  if(s.accepted>0) ins.push(chip('var(--teal-lt)','var(--teal-dk)',`🎯 สัมภาษณ์ ~${rnd(s.interviewed/s.accepted)} คน ต่อ 1 คนที่รับ Offer`));
+  if(s.offers>=20) ins.push(chip('var(--red-lt)','var(--red)',`⚠️ ปฏิเสธ/ถอน Offer ${pct(s.declined,s.offers)}% (${s.declined}/${s.offers}) — คุยเงินเดือน/สถานที่ให้ชัดก่อนส่ง Offer`));
+  if(pw.interviewed>0 && pw.last8Interviewed < pw.interviewed*0.6)
+    ins.push(chip('var(--amber-lt)','var(--amber)',`📉 8 สัปดาห์ล่าสุดสัมภาษณ์ ~${rnd(pw.last8Interviewed)}/สัปดาห์ (เฉลี่ยทั้งปี ~${rnd(pw.interviewed)})`));
+  const topSrc = (f.sources||[])[0], totSrc = (f.sources||[]).reduce((a,b)=>a+b.count,0);
+  if(topSrc && totSrc && topSrc.count/totSrc >= 0.8)
+    ins.push(chip('var(--amber-lt)','var(--amber)',`📣 ผู้สมัคร ${pct(topSrc.count,totSrc)}% มาจาก ${topSrc.source} — เสี่ยงพึ่งช่องทางเดียว`));
+  const hn = (RAW.kpi||{}).hiredNew || 0;
+  if(hn>0 && s.accepted>0 && s.accepted < hn)
+    ins.push(chip('#E8EEF6','var(--navy)',`🔗 Candidate_Data บันทึกผู้ตอบรับ Offer ${s.accepted} ราย จากผู้เข้างานรับใหม่จริง ${hn} ราย (ครอบคลุม ~${pct(s.accepted,hn)}%) — กรอกผล Offer ให้ครบ % จะแม่นขึ้น`));
+  document.getElementById('funnelInsights').innerHTML = ins.join('');
+
+  // ── คุณภาพข้อมูล ──
+  const dq = f.dataQuality || {}, dqItems = [];
+  if(dq.futureDate) dqItems.push(`วันที่สัมภาษณ์เป็นอนาคต (น่าจะพิมพ์ปีผิด) ${dq.futureDate} แถว — แถวที่ ${(dq.futureDateRows||[]).join(', ')}`);
+  if(dq.blankDate)  dqItems.push(`ไม่มีวันที่สัมภาษณ์ ${dq.blankDate} แถว`);
+  if(dq.rsFunnelBlankRows || dq.rsFunnelTemplateRows)
+    dqItems.push(`Recruitment_Status: ช่อง Sourcing/CV Screen/Interview ว่าง ${dq.rsFunnelBlankRows||0} ใบงาน และมีค่าซ้ำ 5/3/3 อีก ${dq.rsFunnelTemplateRows||0} ใบงาน จึงไม่ใช้นับ CV — "CV เข้า" เป็นค่าประมาณ`);
+  if(dq.oddResult)  dqItems.push(`ช่อง Interview Result ไม่ใช่ Pass/Fail/Hold ${dq.oddResult} แถว — แถวที่ ${(dq.oddResultRows||[]).join(', ')}`);
+  const dqEl = document.getElementById('funnelDQ');
+  dqEl.innerHTML = dqItems.length
+    ? `<summary style="cursor:pointer;font-weight:600">🧹 ข้อมูลใน Candidate_Data ที่ควรตรวจ (${dqItems.length} ประเด็น)</summary>
+       <ul style="margin:6px 0 0 18px;line-height:1.7">${dqItems.map(x=>`<li>${x}</li>`).join('')}</ul>` : '';
+  dqEl.style.display = dqItems.length ? 'block' : 'none';
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// ✔ ตรวจทานตัวเลขข้าม 3 หน้า (คำนวณสดทุกครั้งที่โหลด)
+// ═══════════════════════════════════════════════════════════
+function renderReconcile(){
+  const el = document.getElementById('reconcileBox');
+  if(!el) return;
+  const k = RAW.kpi || {};
+  const S = (arr, key) => (arr||[]).reduce((a,r)=>a+(r[key]||0),0);
+  const checks = [];
+  const add = (page, label, a, b) => checks.push({page, label, a, b, ok: a===b});
+
+  const active = k.activeHC != null ? k.activeHC : k.totalHC - k.totalHold;
+  if(k.carriedOverHC != null) add('1','ยอดยกมา + Request New = รวม Request', k.carriedOverHC + k.newRequestHC, k.totalHC);
+  add('1','รวม Request − Hold = ยอดสรรหา', k.totalHC - k.totalHold, active);
+  add('1','ยอดสรรหา − Hired = คงเหลืออัตราว่าง', active - k.totalHired, k.totalVacancies);
+  if(k.hiredNew != null) add('1','รับใหม่ + โอนย้ายภายใน(+อื่นๆ) = Hired', k.hiredNew + k.hiredInternal + (k.hiredOther||0), k.totalHired);
+
+  const tl = RAW.typeLocMatrix;
+  if(tl && tl.length){
+    add('1','ตารางพื้นที่/กราฟประเภท: ผลรวม HC = รวม Request', S(tl,'hcReq'), k.totalHC);
+    add('1','ตารางพื้นที่/กราฟประเภท: ผลรวม Hired = Hired', S(tl,'hired'), k.totalHired);
+    add('1','ตารางพื้นที่/กราฟประเภท: ผลรวมว่าง = คงเหลืออัตราว่าง', S(tl,'vacancies'), k.totalVacancies);
+  }
+  const pm = RAW.positionMatrix;
+  if(pm && pm.length){
+    add('2','ตำแหน่ง × พื้นที่: ผลรวม HC = รวม Request', S(pm,'hcReq'), k.totalHC);
+    add('2','ตำแหน่ง × พื้นที่: ผลรวม Hired = Hired', S(pm,'hired'), k.totalHired);
+    add('2','ตำแหน่ง × พื้นที่: ผลรวมว่าง = คงเหลืออัตราว่าง', S(pm,'vacancies'), k.totalVacancies);
+    add('2','ตำแหน่ง × พื้นที่: ผลรวม Hold = Hold', S(pm,'hold'), k.totalHold);
+    const clinicVac = S(pm.filter(r=>!isOfficeLoc(r.location)),'vacancies');
+    const officeVac = S(pm.filter(r=> isOfficeLoc(r.location)),'vacancies');
+    add('2','ว่างหน้าสาขา + ว่าง Office = คงเหลืออัตราว่าง', clinicVac + officeVac, k.totalVacancies);
+  }
+  const f = RAW.funnel;
+  if(f && f.byGroup && f.byGroup.length && f.byGroup[0].vacancies != null){
+    add('3','Funnel แยกกลุ่มตำแหน่ง: ผลรวม HC = รวม Request', S(f.byGroup,'hcReq'), k.totalHC);
+    add('3','Funnel แยกกลุ่มตำแหน่ง: ผลรวมว่าง = คงเหลืออัตราว่าง', S(f.byGroup,'vacancies'), k.totalVacancies);
+    add('3','Funnel แยกกลุ่มตำแหน่ง: ผลรวม Hired = Hired', S(f.byGroup,'hired'), k.totalHired);
+  }
+  const bad = checks.filter(c=>!c.ok);
+  el.innerHTML = `<summary style="cursor:pointer;font-weight:700;color:${bad.length?'var(--red)':'var(--green)'}">
+      ${bad.length ? '⚠️ ตรวจทานตัวเลข: ไม่ตรง '+bad.length+' จาก '+checks.length+' รายการ' : '✅ ตรวจทานตัวเลขข้าม 3 หน้า: ตรงกันทั้งหมด '+checks.length+'/'+checks.length+' รายการ'}
+      <span style="font-weight:400;color:var(--gray)"> (กดดูรายละเอียด)</span></summary>
+    <table style="margin-top:6px"><thead><tr><th>หน้า</th><th>รายการตรวจ</th><th style="text-align:right">ค่าที่คำนวณ</th><th style="text-align:right">ค่าอ้างอิง</th><th></th></tr></thead><tbody>
+    ${checks.map(c=>`<tr class="${c.ok?'':'critical'}"><td>${c.page}</td><td>${c.label}</td>
+      <td style="text-align:right">${c.a}</td><td style="text-align:right">${c.b}</td>
+      <td>${c.ok?'<span class="bdg bdg-green">✓ ตรง</span>':'<span class="bdg bdg-red">✗ ไม่ตรง</span>'}</td></tr>`).join('')}
+    </tbody></table>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 📆 ค่าเฉลี่ยต่อสัปดาห์ (งานสรรหาต่อเนื่อง: ขอเข้ามา vs จ้างได้)
+// ═══════════════════════════════════════════════════════════
+function getWeeksElapsed(){
+  if(RAW.weeklyFlow && RAW.weeklyFlow.weeksElapsed) return RAW.weeklyFlow.weeksElapsed;
+  if(RAW.funnel && RAW.funnel.weeksElapsed) return RAW.funnel.weeksElapsed;
+  const now = new Date(), j = new Date(now.getFullYear(),0,1);
+  return Math.max(1, ((now - j)/86400000 + 1)/7);
+}
+const fmtRate = n => n<=0 ? '0' : n<0.1 ? '<0.1' : (Math.round(n*10)/10).toFixed(1);
+const clearWeeks = (vac, perWk) => vac<=0 ? '-' : perWk>0 ? '≈'+Math.max(1,Math.round(vac/perWk))+' สัปดาห์' : 'ยังไม่มีการจ้าง';
+
+function renderPosWeekly(mx){
+  const el = document.getElementById('posWeeklyBlock');
+  if(!el) return;
+  const wk = getWeeksElapsed();
+  const sum = k => mx.reduce((a,r)=>a+(r[k]||0),0);
+  const hc = sum('hcReq'), hired = sum('hired'), vac = sum('vacancies');
+  const hirePW = hired/wk;
+  const wf = RAW.weeklyFlow && !RAW.weeklyFlow.error ? RAW.weeklyFlow : null;
+
+  const tile = (l,v,sub,color) => `<div class="kpi" style="border-color:${color}"><div class="kpi-label">${l}</div>
+    <div class="kpi-val" style="color:${color}">${v}</div><div class="kpi-sub">${sub}</div></div>`;
+  const tiles = [
+    tile('HC ขอ / สัปดาห์', '~'+fmtRate(hc/wk), `ขอบเขตที่เลือก · รวม ${hc} อัตรา ÷ ${wk} สัปดาห์`, 'var(--navy)'),
+    tile('จ้างได้ / สัปดาห์', '~'+fmtRate(hirePW), `ขอบเขตที่เลือก · Hired ${hired} ÷ ${wk} สัปดาห์`, 'var(--green)'),
+    tile('🔴 ว่างคงเหลือ', vac, `เคลียร์ครบใน ${clearWeeks(vac,hirePW)} ถ้าจ้างได้เท่าเดิม`, 'var(--red)'),
+    wf ? tile('8 สัปดาห์ล่าสุด (ทั้งบริษัท)', `ขอ ${fmtRate(wf.perWeek.last8NewReq)} · จ้าง ${fmtRate(wf.perWeek.last8Hired)}`,
+          `ต่อสัปดาห์ · เฉลี่ยทั้งปี ขอ ${fmtRate(wf.perWeek.newReq)} / จ้าง ${fmtRate(wf.perWeek.hired)}`, 'var(--teal)')
+       : tile('8 สัปดาห์ล่าสุด', '-', 'ต้องอัปเดต Apps Script (weeklyFlow)', 'var(--gray)')
+  ].join('');
+
+  // กราฟแท่ง 12 สัปดาห์: ขอเข้ามา vs จ้างได้
+  let chart = '<p class="msg">ต้อง Deploy Apps Script เวอร์ชันใหม่เพื่อดูกราฟรายสัปดาห์</p>', insight = '';
+  if(wf){
+    const mxv = Math.max(1, ...wf.weekly.map(w=>Math.max(w.newReq,w.hired)));
+    chart = wf.weekly.map(w=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+      <span style="font-size:9px;color:var(--gray);min-width:34px">${w.weekStart}</span>
+      <div style="flex:1">
+        <div style="height:6px;margin-bottom:1px;width:${w.newReq/mxv*100}%;background:var(--navy);border-radius:2px"></div>
+        <div style="height:6px;width:${w.hired/mxv*100}%;background:var(--green);border-radius:2px"></div></div>
+      <span style="font-size:9px;min-width:46px;text-align:right"><b style="color:var(--navy)">${w.newReq}</b> / <b style="color:var(--green)">${w.hired}</b></span></div>`).join('');
+    const gap = wf.perWeek.last8Hired - wf.perWeek.last8NewReq;
+    insight = gap >= 0
+      ? `<div class="vac-chip zero" style="display:inline-block;margin-top:6px">✅ 8 สัปดาห์ล่าสุดจ้างได้เร็วกว่าขอเข้ามา (+${fmtRate(gap)}/สัปดาห์) → อัตราว่างค่อยๆ ลดลง</div>`
+      : `<div class="vac-chip" style="display:inline-block;margin-top:6px">⚠️ 8 สัปดาห์ล่าสุดขอเข้ามาเร็วกว่าจ้างได้ (${fmtRate(-gap)}/สัปดาห์) → อัตราว่างมีแนวโน้มสะสมเพิ่ม</div>`;
+  }
+
+  // ตารางรายเขต ต่อสัปดาห์
+  const am = {};
+  mx.forEach(r=>{ const a = am[r.location] || (am[r.location] = {hc:0,hired:0,vac:0});
+    a.hc += r.hcReq||0; a.hired += r.hired||0; a.vac += r.vacancies||0; });
+  const areaRows = Object.entries(am).sort((a,b)=>b[1].hc-a[1].hc).map(([name,a])=>`<tr>
+    <td><b>${name.replace('เขตพื้นที่','')}</b></td>
+    <td style="text-align:right">${fmtRate(a.hc/wk)}</td><td style="text-align:right;color:var(--green);font-weight:600">${fmtRate(a.hired/wk)}</td>
+    <td style="text-align:right;color:${a.vac>0?'var(--red)':'var(--gray)'};font-weight:600">${a.vac}</td>
+    <td style="text-align:right">${clearWeeks(a.vac,a.hired/wk)}</td></tr>`).join('');
+
+  el.innerHTML = `<div class="card-title" style="margin:2px 0 8px">📆 ค่าเฉลี่ยต่อสัปดาห์ — งานสรรหาต่อเนื่อง <span style="font-weight:400;color:var(--gray)">(นับ ${wk} สัปดาห์ของปีนี้)</span></div>
+    <div class="kpi-grid kpi-grid-8" style="margin-bottom:10px">${tiles}</div>
+    <div class="row3" style="margin-bottom:12px">
+      <div>
+        <p class="fn-sub">ขอเข้ามา <span style="color:var(--navy)">■</span> vs จ้างได้ <span style="color:var(--green)">■</span> รายสัปดาห์ (อัตรา · ทั้งบริษัท · 12 สัปดาห์ล่าสุด)</p>
+        ${chart}${insight}
+      </div>
+      <div style="overflow-x:auto">
+        <p class="fn-sub">แยกตามเขต (ขอบเขตที่เลือก)</p>
+        <table><thead><tr><th>เขต/พื้นที่</th><th style="text-align:right">ขอ/สัปดาห์</th><th style="text-align:right">จ้าง/สัปดาห์</th>
+          <th style="text-align:right">ว่าง</th><th style="text-align:right">เคลียร์ใน</th></tr></thead><tbody>${areaRows}</tbody></table>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🔴 แถบสรุปอัตราว่างคงเหลือ (ใช้ในหน้า 2 และหน้า 3)
+// ═══════════════════════════════════════════════════════════
+function vacStripHTML(title, sub, t, chipsHTML, extraHTML){
+  const tile = (l, v, color, cls) => `<div class="vac-tile ${cls||''}"><div class="vl">${l}</div>
+    <div class="vv" style="${color?'color:'+color:''}">${v}</div></div>`;
+  return `<div class="vac-strip">
+    <div class="vs-head"><span>🔴 ${title}</span><span style="font-weight:400;color:var(--gray);font-size:10px">${sub||''}</span></div>
+    <div class="vac-tiles">
+      ${tile('ยอดสรรหา (HC − Hold)', t.active)}
+      ${tile('จ้างสำเร็จ Hired', t.hired, 'var(--green)')}
+      ${tile('🔴 คงเหลืออัตราว่าง', t.vac, '', 'big')}
+      ${tile('Hold (ระงับ)', t.hold, 'var(--amber)')}
+      ${tile('% Filled (Hired ÷ HC)', t.fill + '%')}
+    </div>
+    ${chipsHTML||''}${extraHTML||''}</div>`;
+}
+
+// หน้า 2 — ตามขอบเขต (หน้าสาขา/Office/ทั้งหมด) + Filter ที่เลือก
+function renderPosVacStrip(mx, allMx, fl, ft){
+  const el = document.getElementById('posVacStrip');
+  if(!el) return;
+  const sum = (arr, k) => arr.reduce((a,r)=>a+(r[k]||0),0);
+  const hc = sum(mx,'hcReq'), hold = sum(mx,'hold');
+  const t = { active: hc - hold, hired: sum(mx,'hired'), vac: sum(mx,'vacancies'), hold: hold,
+              fill: hc>0 ? Math.round(sum(mx,'hired')/hc*100) : 0 };
+
+  const scopeName = posScope==='clinic' ? 'หน้าสาขา/เขตพื้นที่' : posScope==='office' ? 'Office' : 'ทุกพื้นที่';
+  const filt = [fl, ft].filter(Boolean).join(' · ');
+
+  // ว่างแยกตามเขต
+  const byArea = {};
+  mx.forEach(r => { if(r.vacancies>0) byArea[r.location] = (byArea[r.location]||0) + r.vacancies; });
+  const areaChips = Object.entries(byArea).sort((a,b)=>b[1]-a[1])
+    .map(([a,v]) => `<span class="vac-chip">${a.replace('เขตพื้นที่','')} ${v}</span>`).join('');
+  // ตำแหน่งที่ว่างมากสุด
+  const byPos = {};
+  mx.forEach(r => { if(r.vacancies>0) byPos[r.position] = (byPos[r.position]||0) + r.vacancies; });
+  const posChips = Object.entries(byPos).sort((a,b)=>b[1]-a[1]).slice(0,4)
+    .map(([p,v]) => `<span class="vac-chip" style="background:#FEF3C7;color:var(--amber)">${p} ${v}</span>`).join('');
+
+  const chips = t.vac>0
+    ? `<div class="vac-chips"><span style="font-size:10px;color:var(--gray)">ว่างแยกตามเขต:</span>${areaChips}</div>
+       <div class="vac-chips"><span style="font-size:10px;color:var(--gray)">ตำแหน่งที่ว่างมากสุด:</span>${posChips}</div>`
+    : `<div class="vac-chips"><span class="vac-chip zero">🎉 ไม่มีอัตราว่างค้างในขอบเขตนี้</span></div>`;
+
+  // เทียบทั้งบริษัท (ไม่ขึ้นกับ Filter)
+  const comp = sum(allMx,'vacancies');
+  const compClinic = sum(allMx.filter(r=>!isOfficeLoc(r.location)),'vacancies');
+  const compOffice = comp - compClinic;
+  const extra = `<div style="font-size:10px;color:var(--gray);margin-top:8px">
+    ทั้งบริษัทคงเหลืออัตราว่างรวม <b style="color:var(--red)">${comp}</b> อัตรา
+    (หน้าสาขา <b>${compClinic}</b> · Office <b>${compOffice}</b>) &nbsp;|&nbsp; สูตร: ยอดสรรหา − Hired = คงเหลือ</div>`;
+
+  el.innerHTML = vacStripHTML(`สรุปอัตราว่างคงเหลือ — ${scopeName}`, filt ? 'ตาม Filter: ' + filt : '', t, chips, extra);
+}
+
+// หน้า 3 — ภาพรวมทั้งบริษัท (ไม่ขึ้นกับ Filter)
+function renderFunVacStrip(f){
+  const el = document.getElementById('funVacStrip');
+  if(!el) return;
+  const k = RAW.kpi || {};
+  const hc = k.totalHC || 0, hold = k.totalHold || 0;
+  const t = { active: (k.activeHC != null ? k.activeHC : hc - hold), hired: k.totalHired || 0,
+              vac: k.totalVacancies || 0, hold: hold,
+              fill: hc>0 ? Math.round((k.totalHired||0)/hc*100) : 0 };
+  const grp = (f.byGroup||[]).filter(g => g.vacancies != null);
+  const chips = grp.length ? `<div class="vac-chips"><span style="font-size:10px;color:var(--gray)">ว่างแยกตามกลุ่มตำแหน่ง:</span>
+    ${grp.map(g=>`<span class="vac-chip ${g.vacancies>0?'':'zero'}">${g.group} ${g.vacancies}</span>`).join('')}</div>` : '';
+  const perWk = f.weeksElapsed>0 ? (k.totalHired||0)/f.weeksElapsed : 0;
+  const extra = (t.vac>0 && perWk>0)
+    ? `<div style="font-size:10px;color:var(--gray);margin-top:8px">
+        ที่ความเร็วจ้างเฉลี่ยปีนี้ ~<b>${Math.round(perWk)}</b> คน/สัปดาห์ → เติมอัตราว่างที่เหลือครบในประมาณ <b>${Math.max(1,Math.round(t.vac/perWk))}</b> สัปดาห์
+        (ประมาณการ ถ้าไม่มีใบงานใหม่เพิ่ม)</div>` : '';
+  el.innerHTML = vacStripHTML('สรุปอัตราว่างคงเหลือ — ทั้งบริษัท', 'ภาพรวมทั้งปี ไม่ขึ้นกับ Filter', t, chips, extra);
+}
+
+// ═══════════════════════════════════════════════════════════
+// 📑 สลับ 3 หน้ารายงาน
+// ═══════════════════════════════════════════════════════════
+let currentPage = 1;
+function showPage(n){
+  currentPage = n;
+  [1,2,3].forEach(i => {
+    document.getElementById('page'+i).classList.toggle('active', i===n);
+    document.getElementById('tab'+i).classList.toggle('active', i===n);
+  });
+  document.body.classList.toggle('on-p3', n===3);   // Filter ใช้กับหน้า 1-2 เท่านั้น
+  if(n===1){ try{ if(typeChart) typeChart.resize(); if(monthChart) monthChart.resize(); }catch(e){} }
+  try{ history.replaceState(null, '', '#p'+n); }catch(e){}
+  window.scrollTo(0,0);
+}
+
+let posScope = 'clinic';   // clinic = หน้าสาขา/เขตพื้นที่ | office | all
+const isOfficeLoc = l => /office|สำนักงานใหญ่/i.test(l || '');
+const isReplaceType = t => (t || '').indexOf('ทดแทน') !== -1;
+
+// สำรอง: ถ้า Apps Script ยังไม่ส่ง positionMatrix → ประมาณจาก pipeline + recentHired
+function buildPositionMatrix(){
+  const map = {}, k = (l,p,t) => l+'|||'+p+'|||'+t;
+  const add = (r, hc, hired, vac) => {
+    const kk = k(r.location||'ไม่ระบุ', r.position||'ไม่ระบุ', r.type||'ไม่ระบุ');
+    if(!map[kk]) map[kk] = {location:r.location||'ไม่ระบุ', position:r.position||'ไม่ระบุ',
+      type:r.type||'ไม่ระบุ', reqCount:0, hcReq:0, hired:0, vacancies:0, hold:0, avgDays:0};
+    const m = map[kk]; m.hcReq+=hc; m.hired+=hired; m.vacancies+=vac; m.reqCount+=1;
+  };
+  (RAW.pipeline||[]).forEach(r => add(r, (r.vacancies||1), 0, (r.vacancies||1)));
+  (RAW.recentHired||[]).forEach(r => add(r, 1, 1, 0));
+  return Object.values(map);
+}
+
+function setPosScope(s){ posScope = s; renderPositionBranch(); }
+
+function renderPositionBranch(){
+  const card = document.getElementById('posBranchCard');
+  if(!card) return;
+  card.style.display = 'block';
+
+  const exact = !!(RAW.positionMatrix && RAW.positionMatrix.length);
+  let mx = exact ? RAW.positionMatrix.slice() : buildPositionMatrix();
+  const allMx = mx.slice();   // ยังไม่กรอง ใช้สรุปทั้งบริษัท
+
+  const fl = filterLoc(), ft = filterTyp();
+  if(fl) mx = mx.filter(r => r.location === fl);
+  if(ft) mx = mx.filter(r => r.type === ft);
+  if(posScope === 'clinic') mx = mx.filter(r => !isOfficeLoc(r.location));
+  if(posScope === 'office') mx = mx.filter(r =>  isOfficeLoc(r.location));
+
+  // chips ขอบเขต
+  const chip = (id, label) => `<button onclick="setPosScope('${id}')" style="font-size:11px;padding:4px 12px;
+    border-radius:20px;cursor:pointer;font-weight:600;font-family:inherit;
+    border:1px solid ${posScope===id?'var(--teal)':'#D1D5DB'};
+    background:${posScope===id?'var(--teal)':'#fff'};color:${posScope===id?'#fff':'var(--gray-dk)'}">${label}</button>`;
+  document.getElementById('posScopeChips').innerHTML =
+    chip('clinic','🏥 หน้าสาขา/เขตพื้นที่') + chip('office','🏢 Office') + chip('all','ทั้งหมด');
+
+  document.getElementById('posBranchNote').innerHTML = exact ? '' :
+    `<div style="background:var(--amber-lt);color:var(--amber);border-radius:6px;padding:6px 10px;font-size:11px;margin-bottom:8px">
+     ⚠️ ตัวเลขชุดนี้เป็นค่าประมาณ (Apps Script ยังไม่ได้อัปเดตเวอร์ชันใหม่ที่ส่ง positionMatrix) — อัปเดต Code.gs แล้ว Deploy New version เพื่อให้ตรง 100%</div>`;
+
+  renderPosVacStrip(mx, allMx, fl, ft);
+  renderPosWeekly(mx);
+
+  // รวมตามตำแหน่ง
+  const pm = {}, areaSet = new Set();
+  mx.forEach(r => {
+    areaSet.add(r.location);
+    const p = pm[r.position] || (pm[r.position] = {pos:r.position, hc:0, hired:0, vac:0, hold:0, rep:0, req:0, days:[], area:{}});
+    p.hc += r.hcReq; p.hired += r.hired; p.vac += r.vacancies; p.hold += (r.hold||0);
+    p.req += (r.reqCount||0);
+    if(isReplaceType(r.type)) p.rep += r.hcReq;
+    if(r.avgDays>0) p.days.push(r.avgDays);
+    const a = p.area[r.location] || (p.area[r.location] = {hc:0, vac:0});
+    a.hc += r.hcReq; a.vac += r.vacancies;
+  });
+  const totalHC = Object.values(pm).reduce((s,p)=>s+p.hc,0) || 1;
+  const list = Object.values(pm).map(p => ({
+    ...p,
+    fill:  p.hc>0 ? Math.round(p.hired/p.hc*100) : 0,
+    repPct:p.hc>0 ? Math.round(p.rep/p.hc*100)   : 0,
+    share: Math.round(p.hc/totalHC*1000)/10,
+    avgD:  p.days.length ? Math.round(p.days.reduce((a,b)=>a+b,0)/p.days.length) : 0
+  })).sort((a,b)=> b.hc-a.hc || a.pos.localeCompare(b.pos,'th'));
+
+  const areas = [...areaSet].sort((a,b)=>a.localeCompare(b,'th'));
+  const shortArea = a => a.replace('เขตพื้นที่','').trim() || a;
+
+  if(!list.length){
+    document.getElementById('posBranchTable').innerHTML = '<tr><td class="msg">ไม่มีข้อมูลในขอบเขตที่เลือก</td></tr>';
+    document.getElementById('posHeatTable').innerHTML = '';
+    document.getElementById('posInsights').innerHTML = '';
+    return;
+  }
+
+  // Insight: ตำแหน่งที่ต้องรับต่อเนื่อง (Always-on)
+  const always = list.filter(p => p.hc>=5 && p.repPct>=60).slice(0,4);
+  const urgent = list.filter(p => p.vac>0).sort((a,b)=>b.vac-a.vac).slice(0,2);
+  document.getElementById('posInsights').innerHTML =
+    always.map(p=>`<span style="background:var(--teal-lt);color:var(--teal-dk);font-size:11px;padding:4px 10px;border-radius:20px;font-weight:600">
+      🔁 ${p.pos}: ${p.hc} อัตรา (${p.share}% ของงานสรรหา) · วนรับ ${p.repPct}% → เปิดรับต่อเนื่อง + Talent Pool</span>`).join('') +
+    urgent.map(p=>`<span style="background:var(--red-lt);color:var(--red);font-size:11px;padding:4px 10px;border-radius:20px;font-weight:600">
+      🔴 ${p.pos}: ว่างอยู่ ${p.vac} อัตรา</span>`).join('');
+
+  // ตารางสรุปตามตำแหน่ง
+  const wk = getWeeksElapsed();
+  const bar = (pct, color) => `<div style="display:flex;align-items:center;gap:5px;min-width:110px">
+      <div style="flex:1;height:8px;background:#E5E7EB;border-radius:4px;overflow:hidden">
+        <div style="width:${Math.min(pct,100)}%;height:100%;background:${color}"></div></div>
+      <b style="font-size:10px;min-width:30px;color:${color}">${pct}%</b></div>`;
+  document.getElementById('posBranchTable').innerHTML = `
+    <thead><tr>
+      <th>ตำแหน่งงาน</th><th style="text-align:right">HC ขอ</th><th style="text-align:right">สัดส่วนงานสรรหา</th>
+      <th style="text-align:right">Hired</th><th style="text-align:right">ว่าง</th>
+      <th>Fill %</th><th>% วนรับ (ทดแทน)</th><th style="text-align:right">Avg Days</th>
+      <th style="text-align:right" title="HC ขอ ÷ จำนวนสัปดาห์ที่ผ่านมาของปี">ขอ/สัปดาห์</th><th style="text-align:right" title="Hired ÷ จำนวนสัปดาห์ที่ผ่านมาของปี">จ้าง/สัปดาห์</th><th style="text-align:right" title="อัตราว่าง ÷ ความเร็วจ้างต่อสัปดาห์ของตำแหน่งนั้น">เคลียร์ว่างใน</th><th>การสรรหา</th>
+    </tr></thead><tbody>
+    ${list.map(p=>{
+      const fillC = p.fill>=80?'var(--green)':p.fill>=60?'var(--amber)':'var(--red)';
+      const repC  = p.repPct>=80?'var(--navy)':p.repPct>=50?'var(--teal)':'var(--gray)';
+      const hp = p.hired/wk, cw = p.vac>0 ? (hp>0 ? p.vac/hp : Infinity) : 0;
+      const tags = [];
+      if(p.hc>=5 && p.repPct>=60) tags.push('<span class="bdg bdg-teal">🔁 รับต่อเนื่อง</span>');
+      if(p.vac>0) tags.push(cw>12 ? '<span class="bdg bdg-amber" title="อัตราว่างคงเหลือ ÷ ความเร็วจ้างปัจจุบัน เกิน 12 สัปดาห์ — ควรเพิ่มช่องทาง/ปรับ Offer">🐢 เติมยาก</span>'
+                                   : '<span class="bdg bdg-red">🔴 มีงานค้าง</span>');
+      if(!tags.length) tags.push('<span class="bdg bdg-green">✓ ปกติ</span>');
+      const tag = tags.join(' ');
+      return `<tr>
+        <td><b>${p.pos}</b></td>
+        <td style="text-align:right">${p.hc}</td>
+        <td style="text-align:right;color:var(--gray-dk)">${p.share}%</td>
+        <td style="text-align:right;color:var(--green);font-weight:600">${p.hired}</td>
+        <td style="text-align:right;color:${p.vac>0?'var(--red)':'var(--green)'};font-weight:600">${p.vac}</td>
+        <td>${bar(p.fill, fillC)}</td>
+        <td>${bar(p.repPct, repC)}</td>
+        <td style="text-align:right">${p.avgD||'-'}</td>
+        <td style="text-align:right">${fmtRate(p.hc/wk)}</td>
+        <td style="text-align:right">${fmtRate(p.hired/wk)}</td>
+        <td style="text-align:right;color:${p.vac>0?'var(--red)':'var(--gray)'}">${clearWeeks(p.vac,p.hired/wk)}</td>
+        <td>${tag}</td></tr>`;
+    }).join('')}</tbody>`;
+
+  // Heatmap: ตำแหน่ง × พื้นที่ (แสดงเฉพาะตำแหน่งที่มี HC)
+  const maxCell = Math.max(1, ...list.flatMap(p => Object.values(p.area).map(a=>a.hc)));
+  const colTot = {}, colVac = {};
+  areas.forEach(a => {
+    colTot[a] = list.reduce((s,p)=>s+((p.area[a]||{}).hc||0),0);
+    colVac[a] = list.reduce((s,p)=>s+((p.area[a]||{}).vac||0),0);
+  });
+  const grandHC  = list.reduce((s,p)=>s+p.hc,0), grandVac = list.reduce((s,p)=>s+p.vac,0);
+  const vb = v => v>0 ? ` <span style="display:inline-block;min-width:15px;padding:0 4px;border-radius:10px;background:var(--red);color:#fff;font-size:9px;line-height:15px">${v}</span>` : '';
+  document.getElementById('posHeatTable').innerHTML = `
+    <thead><tr><th style="position:sticky;left:0;z-index:2">ตำแหน่งงาน</th>
+      ${areas.map(a=>`<th style="text-align:center;white-space:normal;min-width:84px">${shortArea(a)}</th>`).join('')}
+      <th style="text-align:center">รวม</th></tr></thead><tbody>
+    ${list.map(p=>`<tr>
+      <td style="position:sticky;left:0;background:#fff;font-weight:600;white-space:nowrap">${p.pos}</td>
+      ${areas.map(a=>{
+        const c = p.area[a];
+        if(!c || !c.hc) return '<td style="text-align:center;color:#D1D5DB">–</td>';
+        const alpha = (0.12 + 0.78*c.hc/maxCell).toFixed(2);
+        const dark = c.hc/maxCell > 0.5;
+        return `<td style="text-align:center;background:rgba(15,110,86,${alpha});color:${dark?'#fff':'#0A5240'};font-weight:700">
+          ${c.hc}${c.vac>0?` <span style="display:inline-block;min-width:15px;padding:0 4px;border-radius:10px;background:var(--red);color:#fff;font-size:9px;line-height:15px">${c.vac}</span>`:''}</td>`;
+      }).join('')}
+      <td style="text-align:center;font-weight:700">${p.hc}${vb(p.vac)}</td></tr>`).join('')}
+    <tr style="background:var(--gray-lt);font-weight:700"><td style="position:sticky;left:0;background:var(--gray-lt)">รวมทุกตำแหน่ง</td>
+      ${areas.map(a=>`<td style="text-align:center">${colTot[a]}${vb(colVac[a])}</td>`).join('')}
+      <td style="text-align:center">${grandHC}${vb(grandVac)}</td></tr></tbody>`;
+}
+
 // ── Location Table — group by location เสมอ (แถวเดียวต่อเขต) ──
 function renderLocationTable(){
   const fl = filterLoc();
@@ -616,8 +1240,9 @@ function renderLocationTable(){
   source.forEach(r => {
     const loc = r.location || 'ไม่ระบุ';
     if(!locGroup[loc]) locGroup[loc] = {
-      location:loc, hcReq:0, hired:0, vacancies:0, hold:0, daysArr:[]
+      location:loc, hcReq:0, hired:0, vacancies:0, hold:0, rep:0, daysArr:[]
     };
+    if(isReplaceType(r.type)) locGroup[loc].rep += (r.hcReq||0);
     locGroup[loc].hcReq     += (r.hcReq    ||0);
     locGroup[loc].hired     += (r.hired     ||0);
     locGroup[loc].vacancies += (r.vacancies ||0);
@@ -635,13 +1260,14 @@ function renderLocationTable(){
       hired:     d.hired,
       vacancies: d.vacancies,
       hold:      d.hold,
+      rep:       d.rep,
       replRate:  Math.round(rr * 10) / 10,
       avgDays:   Math.round(ad),
       status:    rr >= 80 ? "OK" : rr >= 60 ? "WATCH" : "CRITICAL"
     };
   }).sort((a,b) => a.location.localeCompare(b.location,'th'));
   const tbody = document.getElementById('locationBody');
-  if(!rows.length){ tbody.innerHTML='<tr><td colspan="8" class="msg">ไม่มีข้อมูล</td></tr>'; return; }
+  if(!rows.length){ tbody.innerHTML='<tr><td colspan="9" class="msg">ไม่มีข้อมูล</td></tr>'; return; }
   const colors = {OK:'green',WATCH:'amber',CRITICAL:'red'};
   tbody.innerHTML = rows.map(r=>{
     const pct = r.replRate;
@@ -649,7 +1275,7 @@ function renderLocationTable(){
     return `<tr class="${cls}">
       <td><b>${r.location}</b></td>
       <td style="text-align:right">${r.hcReq}</td>
-      <td style="text-align:right">${r.hcReq - r.hired}</td>
+      <td style="text-align:right">${r.rep}</td>
       <td style="text-align:right;color:var(--green);font-weight:600">${r.hired}</td>
       <td style="text-align:right">
         <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
@@ -659,6 +1285,7 @@ function renderLocationTable(){
           <b>${pct}%</b>
         </div>
       </td>
+      <td style="text-align:right;color:var(--amber)">${r.hold||0}</td>
       <td style="text-align:right;color:var(--red);font-weight:600">${r.vacancies}</td>
       <td style="text-align:right">${r.avgDays}</td>
       <td><span class="bdg bdg-${colors[r.status]||'amber'}">${r.status}</span></td>
@@ -1148,6 +1775,8 @@ function showLoading(on){
 
 // ── Init — โหลดอัตโนมัติทันทีเมื่อเปิดหน้า ──────────────
 window.addEventListener('DOMContentLoaded', function(){
+  const m = (location.hash||'').match(/^#p([123])$/);
+  if(m) showPage(+m[1]);
   autoLoad();
 });
 </script>
