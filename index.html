@@ -556,23 +556,54 @@ function filterTyp(){ return document.getElementById('filterType').value;     }
 // ── Render All ───────────────────────────────────────────
 function renderAll(){
   if(!RAW) return;
-  updateFilterBadges();
-  renderKPI();
-  renderSummaryDetail();
-  renderReconcile();
-  renderFunnel();
-  renderPositionBranch();
-  renderLocationTable();
-  renderTypeChart();
-  renderMonthlyChart();
-  renderMonthlyStats();
-  renderPipeline();
-  renderRecentHired();
-  renderPositionView();
+  // เรียกแต่ละส่วนแยกกัน: ถ้าส่วนใดพัง ส่วนอื่นยังแสดงต่อ และแจ้งชื่อส่วนที่พังไว้ที่หน้านั้น
+  const errs = [];
+  const safe = (name, fn) => { try{ fn(); }catch(e){ console.error('[render:'+name+']', e); errs.push(name+': '+(e && e.message || e)); } };
+  safe('filterBadges', updateFilterBadges);
+  safe('kpi', renderKPI);
+  safe('summaryDetail', renderSummaryDetail);
+  safe('reconcile', renderReconcile);
+  safe('rsQuality', renderRsQuality);
+  safe('funnel', renderFunnel);
+  safe('positionBranch', renderPositionBranch);
+  safe('locationTable', renderLocationTable);
+  safe('typeChart', renderTypeChart);
+  safe('monthlyChart', renderMonthlyChart);
+  safe('monthlyStats', renderMonthlyStats);
+  safe('pipeline', renderPipeline);
+  safe('recentHired', renderRecentHired);
+  safe('positionView', renderPositionView);
   ['row2','row3','row4','row5'].forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.style.display='grid';
   });
+  let eb = document.getElementById('renderErrBox');
+  if(errs.length){
+    if(!eb){ eb = document.createElement('div'); eb.id='renderErrBox'; eb.className='card';
+             eb.style.cssText='margin:10px auto;max-width:1200px;padding:12px 16px;font-size:12px;color:#b00020';
+             const tabs=document.getElementById('pageTabs'); tabs.parentNode.insertBefore(eb, tabs.nextSibling); }
+    eb.innerHTML = '⚠️ บางส่วนของหน้าแสดงผลไม่สำเร็จ (ส่วนอื่นยังใช้ได้) — ส่งข้อความนี้ให้ผู้ช่วย: <br>' + errs.join('<br>');
+  } else if(eb){ eb.remove(); }
+}
+
+// ── คุณภาพข้อมูล Recruitment_Status (แจ้งเตือนฝั่ง HR/RC ให้แก้ใน Sheet) ──
+function renderRsQuality(){
+  const q = RAW.rsQuality;
+  let box = document.getElementById('rsDQ');
+  const anchor = document.getElementById('reconcileBox');
+  if(!anchor) return;
+  if(!box){ box = document.createElement('div'); box.id='rsDQ'; anchor.parentNode.insertBefore(box, anchor.nextSibling); }
+  if(!q){ box.style.display='none'; return; }
+  const items = [];
+  const list = a => a.slice(0,12).join(', ') + (a.length>12 ? ` …(+${a.length-12})` : '');
+  if(q.noReqDate && q.noReqDate.length) items.push(`<b>ยังไม่มี Request Date ${q.noReqDate.length} ใบงาน (${q.noReqDateHC||0} อัตรา) — ไม่ถูกนับในรายงานนี้</b> (นับเฉพาะใบงานที่มี Request Date เหมือน Monthly Report) · ${list(q.noReqDate)} · กรอกวันที่ขอในชีต แล้วจะเข้าตัวเลขเอง`);
+  if(q.noPosition && q.noPosition.length) items.push(`ไม่ระบุตำแหน่ง ${q.noPosition.length} ใบงาน — ${list(q.noPosition)}`);
+  if(q.noLocation && q.noLocation.length) items.push(`ไม่ระบุ Location ${q.noLocation.length} ใบงาน — ${list(q.noLocation)}`);
+  if(q.noType && q.noType.length) items.push(`ไม่ระบุประเภทอัตรา ${q.noType.length} ใบงาน — ${list(q.noType)}`);
+  if(q.hcBad && q.hcBad.length) items.push(`ตัวเลข ว่าง ≠ HC − Hold − Hired ${q.hcBad.length} ใบงาน — ${list(q.hcBad)}`);
+  box.style.cssText = 'margin:8px 0 0;font-size:12px;line-height:1.7;background:#FFF8E1;border:1px solid #F0D58A;border-radius:10px;padding:8px 14px;color:#6b4e00';
+  box.style.display = items.length ? 'block' : 'none';
+  box.innerHTML = items.length ? '🧹 <b>ข้อมูลใน Recruitment_Status ที่ควรแก้ (' + items.length + ' ประเด็น)</b><ul style="margin:4px 0 0 18px">' + items.map(x=>'<li>'+x+'</li>').join('') + '</ul>' : '';
 }
 
 // ── KPI Cards (กรองตาม Location + Type ทั้งคู่) ──────────
