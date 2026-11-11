@@ -93,6 +93,13 @@ tr.watch td{background:var(--amber-lt)}
 
 /* ── 3 หน้ารายงาน ── */
 .page{display:none}
+.act-card{background:#F4FAF7;border:1px solid #CFE6DC;border-radius:12px;padding:12px 16px;margin:10px 0}
+.act-card h4{margin:0 0 6px;font-size:13px;color:var(--teal-dk,#0f5c47)}
+.act{display:flex;gap:8px;align-items:flex-start;font-size:12px;line-height:1.6;margin:4px 0}
+.act .own{flex:0 0 auto;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;margin-top:2px;white-space:nowrap}
+.own.hr{background:#E3F1EC;color:#0f5c47}.own.bu{background:#FFF1D6;color:#8a5a00}.own.both{background:#E4ECF7;color:#1f3d6b}
+.rbar{display:flex;align-items:center;gap:6px;font-size:11px;margin:2px 0}.rbar i{display:block;height:8px;border-radius:3px;background:#C0392B}
+
 .page.active{display:block}
 .page-title{display:none}
 .page-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
@@ -306,6 +313,7 @@ body.on-p3 #filterBar,body.on-p3 #filterBadges{display:none !important}
   <div id="posWeeklyBlock"></div>
   <div id="posBranchNote"></div>
   <div id="posInsights" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
+  <div id="posActions"></div>
   <div style="overflow-x:auto"><table id="posBranchTable"></table></div>
   <div class="card-title" style="margin:14px 0 8px">🗺️ แผนที่ความต้องการ: ตำแหน่ง × พื้นที่ <span style="font-weight:400;color:var(--gray)">(ตัวเลข = HC ที่ขอ · วงกลมแดง = อัตราที่ยังว่างอยู่ — รวมถึงแถว/คอลัมน์รวม)</span></div>
   <div style="overflow-x:auto"><table id="posHeatTable"></table></div>
@@ -343,6 +351,7 @@ body.on-p3 #filterBar,body.on-p3 #filterBadges{display:none !important}
   <p class="fn-sub">📍 แยกตามเขต (ที่ส่งสัมภาษณ์)</p>
   <div style="overflow-x:auto;margin-bottom:10px"><table id="funnelAreaTable"></table></div>
   <div id="funnelInsights" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
+  <div id="funnelActions"></div>
   <details id="funnelDQ" style="font-size:11px;color:var(--gray-dk)"></details>
   <p style="font-size:10px;color:var(--gray);margin-top:8px;line-height:1.6">
     <b>ผ่านพรีสกรีน = ส่งเขตสัมภาษณ์</b> เพราะผู้สมัครทุกคนใน Candidate_Data ผ่านพรีสกรีนก่อนส่งเขต ·
@@ -577,6 +586,7 @@ function renderAll(){
     const el=document.getElementById(id);
     if(el) el.style.display='grid';
   });
+  safe('diag', renderDiag);
   let eb = document.getElementById('renderErrBox');
   if(errs.length){
     if(!eb){ eb = document.createElement('div'); eb.id='renderErrBox'; eb.className='card';
@@ -584,6 +594,21 @@ function renderAll(){
              const tabs=document.getElementById('pageTabs'); tabs.parentNode.insertBefore(eb, tabs.nextSibling); }
     eb.innerHTML = '⚠️ บางส่วนของหน้าแสดงผลไม่สำเร็จ (ส่วนอื่นยังใช้ได้) — ส่งข้อความนี้ให้ผู้ช่วย: <br>' + errs.join('<br>');
   } else if(eb){ eb.remove(); }
+}
+
+// ── บรรทัดวินิจฉัย (ท้ายหน้า): บอกว่าเว็บเวอร์ชันไหน ต่อ Apps Script ลิงก์ไหน และ API ส่งอะไรมาบ้าง ──
+const HTML_VERSION = 'R9 · 11/11/2026';
+function renderDiag(){
+  let d = document.getElementById('diagLine');
+  if(!d){ d = document.createElement('div'); d.id='diagLine';
+    d.style.cssText='margin:18px auto 24px;max-width:1200px;padding:0 16px;font-size:11px;color:#8a8f98;text-align:center;line-height:1.7';
+    document.body.appendChild(d); }
+  const ok = v => v ? '✅' : '❌';
+  const url = (typeof FIXED_URL==='string' ? FIXED_URL : '');
+  d.innerHTML = `เวอร์ชันหน้าเว็บ ${HTML_VERSION} · เชื่อม Apps Script …${url.slice(-14)} · `
+    + `API ส่งมา: funnel ${ok(RAW.funnel && RAW.funnel.stages)} positionMatrix ${ok(RAW.positionMatrix)} weeklyFlow ${ok(RAW.weeklyFlow && !RAW.weeklyFlow.error)} rsQuality ${ok(RAW.rsQuality)}`
+    + ` · HC ${RAW.kpi ? RAW.kpi.totalHC : '-'} / ว่าง ${RAW.kpi ? RAW.kpi.totalVacancies : '-'}`
+    + (RAW.funnel && RAW.funnel.error ? ' · funnel error: ' + RAW.funnel.error : '');
 }
 
 // ── คุณภาพข้อมูล Recruitment_Status (แจ้งเตือนฝั่ง HR/RC ให้แก้ใน Sheet) ──
@@ -866,15 +891,14 @@ function renderFunnel(){
   const chip = (bg, fg, txt) => `<span style="background:${bg};color:${fg};font-size:11px;padding:4px 10px;border-radius:20px;font-weight:600">${txt}</span>`;
   const ins = [];
   if(s.accepted>0) ins.push(chip('var(--teal-lt)','var(--teal-dk)',`🎯 สัมภาษณ์ ~${rnd(s.interviewed/s.accepted)} คน ต่อ 1 คนที่รับ Offer`));
-  if(s.offers>=20) ins.push(chip('var(--red-lt)','var(--red)',`⚠️ ปฏิเสธ/ถอน Offer ${pct(s.declined,s.offers)}% (${s.declined}/${s.offers}) — คุยเงินเดือน/สถานที่ให้ชัดก่อนส่ง Offer`));
+  if(false && s.offers>=20) ins.push(chip('var(--red-lt)','var(--red)',`⚠️ ปฏิเสธ/ถอน Offer ${pct(s.declined,s.offers)}% (${s.declined}/${s.offers}) — คุยเงินเดือน/สถานที่ให้ชัดก่อนส่ง Offer`));
   if(pw.interviewed>0 && pw.last8Interviewed < pw.interviewed*0.6)
     ins.push(chip('var(--amber-lt)','var(--amber)',`📉 8 สัปดาห์ล่าสุดสัมภาษณ์ ~${rnd(pw.last8Interviewed)}/สัปดาห์ (เฉลี่ยทั้งปี ~${rnd(pw.interviewed)})`));
   const topSrc = (f.sources||[])[0], totSrc = (f.sources||[]).reduce((a,b)=>a+b.count,0);
   if(topSrc && totSrc && topSrc.count/totSrc >= 0.8)
     ins.push(chip('var(--amber-lt)','var(--amber)',`📣 ผู้สมัคร ${pct(topSrc.count,totSrc)}% มาจาก ${topSrc.source} — เสี่ยงพึ่งช่องทางเดียว`));
   const hn = (RAW.kpi||{}).hiredNew || 0;
-  if(hn>0 && s.accepted>0 && s.accepted < hn)
-    ins.push(chip('#E8EEF6','var(--navy)',`🔗 Candidate_Data บันทึกผู้ตอบรับ Offer ${s.accepted} ราย จากผู้เข้างานรับใหม่จริง ${hn} ราย (ครอบคลุม ~${pct(s.accepted,hn)}%) — กรอกผล Offer ให้ครบ % จะแม่นขึ้น`));
+  /* (ซ่อนป้ายความครอบคลุมของผล Offer — ยังเก็บข้อมูลไม่ครบ) */
   document.getElementById('funnelInsights').innerHTML = ins.join('');
 
   // ── คุณภาพข้อมูล ──
@@ -889,6 +913,54 @@ function renderFunnel(){
     ? `<summary style="cursor:pointer;font-weight:600">🧹 ข้อมูลใน Candidate_Data ที่ควรตรวจ (${dqItems.length} ประเด็น)</summary>
        <ul style="margin:6px 0 0 18px;line-height:1.7">${dqItems.map(x=>`<li>${x}</li>`).join('')}</ul>` : '';
   dqEl.style.display = dqItems.length ? 'block' : 'none';
+  renderFunnelActions(f);
+}
+
+// ═══ 💡 Insight หน้า 3: เจาะ Offer ที่ไม่ได้ตอบรับ + แนวทาง HR × BU ═══
+const SHOW_OFFER_DEEPDIVE = false;   // เปิดเป็น true เมื่อ RC บันทึกผล Offer + เหตุผลที่ไม่รับครบแล้ว
+function renderFunnelActions(f){
+  const el = document.getElementById('funnelActions'); if(!el) return;
+  if(!SHOW_OFFER_DEEPDIVE){ el.innerHTML=''; el.style.display='none'; return; }
+  el.style.display='block';
+  const s = f.stages, k = RAW.kpi || {};
+  const pct = (a,b) => b>0 ? Math.round(a/b*100) : 0;
+  const own = (cls, t) => `<span class="own ${cls}">${t}</span>`;
+  const dec = f.decline || null;
+  const hn = k.hiredNew || 0;
+  // ช่วงอัตราปฏิเสธ: ต่ำสุดสมมติผู้ตอบรับจริง = คนเข้างานรับใหม่; สูงสุด = ตามที่บันทึกไว้
+  const declHi = pct(s.declined, s.offers);
+  const acc = Math.max(s.accepted, hn);
+  const declLo = pct(s.declined, s.declined + acc);
+  const offersPerHire = acc>0 ? ((s.declined + acc)/acc) : 0;
+
+  // เหตุผล
+  let reasonHTML = '', known = 0;
+  if(dec && dec.reasons && dec.total>0){
+    const generic = r => /ไม่ระบุเหตุผล|ไม่มีบันทึก/.test(r);
+    known = dec.reasons.filter(r=>!generic(r.reason)).reduce((a,r)=>a+r.count,0);
+    const mx = Math.max(...dec.reasons.map(r=>r.count));
+    reasonHTML = dec.reasons.map(r=>`<div class="rbar"><span style="min-width:170px;${generic(r.reason)?'color:var(--gray)':''}">${r.reason}</span><i style="width:${Math.max(3,r.count/mx*180)}px;${generic(r.reason)?'background:#B8BEC7':''}"></i><b>${r.count}</b> <span style="color:var(--gray)">(${pct(r.count,dec.total)}%)</span></div>`).join('');
+  }
+
+  // กลุ่มตำแหน่ง/เขตที่ปฏิเสธสูง (เฉพาะที่มี Offer ≥ 10 เพื่อไม่ให้ตัวอย่างน้อยหลอก)
+  const worstG = (f.byGroup||[]).filter(g=>g.offers>=10).map(g=>({n:g.group, r:pct(g.declined,g.offers), d:g.declined, o:g.offers})).sort((a,b)=>b.r-a.r)[0];
+  const worstA = (f.byArea||[]).filter(a=>a.offers>=10 && a.area!=='Office').map(a=>({n:a.area.replace('เขตพื้นที่',''), r:pct(a.declined,a.offers), d:a.declined, o:a.offers})).sort((a,b)=>b.r-a.r)[0];
+
+  const items = [];
+  items.push([own('hr','HR'), `<b>เก็บ "เหตุผลที่ไม่รับ" ให้ได้ทุกราย</b> — เพิ่มคอลัมน์ dropdown ใน Candidate_Data (ค่าตอบแทน / ระยะทาง-สาขา / ได้งานที่อื่น / ครอบครัว-ส่วนตัว / ตำแหน่งไม่ตรงที่คาด / ติดต่อไม่ได้) ให้ RC กรอกภายใน 1 วันหลังรู้ผล · เก็บครบ 4-6 สัปดาห์ แล้วค่อยตัดสินใจเรื่องค่าตอบแทน/สวัสดิการ <u>ไม่เดา</u>`]);
+  items.push([own('both','HR + BU'), `<b>ยืนยันสาขา/ระยะเดินทางก่อนออก Offer</b> — ถามที่พัก/ความสะดวกเดินทางตั้งแต่รอบสัมภาษณ์ แล้วเสนอสาขาที่เหมาะ (เหตุผล "ไม่สะดวกเดินทาง/ไม่ได้สาขาที่ต้องการ" เป็นเรื่องที่ BU ช่วยได้เร็วที่สุด)`]);
+  items.push([own('bu','BU'), `ผู้จัดการเขตหรือหัวหน้าสาขา <b>โทรทักผู้ผ่านสัมภาษณ์ภายใน 24-48 ชม.</b> แนะนำทีม/สาขา และตอบข้อสงสัย ช่วยให้ผู้สมัครรู้สึกอยากร่วมงานก่อนตัดสินใจ`]);
+  items.push([own('hr','HR'), `<b>รักษา Pre-boarding</b> ระหว่างรอวันเริ่มงาน: ส่งข้อความสั้นๆ สัปดาห์ละครั้ง + ยืนยันเอกสาร/วันเริ่มงาน 3 วันก่อนเริ่ม ลดกรณี "ไม่มาเซ็นสัญญา/ไม่มาเริ่มงาน"`]);
+  if(offersPerHire>0){
+    items.push([own('hr','HR'), `<b>เผื่อ Offer สำรอง:</b> ตอนนี้ต้องออก Offer ~${offersPerHire.toFixed(1)} ครั้งต่อการจ้าง 1 คน → อัตราที่เปิดรับ ${k.totalVacancies||0} อัตรา ควรมีผู้ผ่านสัมภาษณ์รอไว้ราว ${Math.ceil((k.totalVacancies||0)*offersPerHire)} คน (ใช้ Talent Pool ที่ผ่านแล้วแต่ยังไม่มีอัตรา)`]);
+  }
+
+  el.innerHTML = `<div class="act-card"><h4>💡 เจาะ Offer ที่ไม่ได้ตอบรับ & แนวทางทำงานร่วม HR × BU</h4>
+    <div class="act">${own('both','ภาพรวม')}<div>ใน Candidate_Data ปีนี้ออก Offer ${s.offers} ราย ปฏิเสธ/ถอน ${s.declined} ราย (${declHi}% ของที่บันทึก) · แต่การตอบรับยังบันทึกไม่ครบ (${s.accepted} ราย เทียบคนเข้างานรับใหม่ ${hn} ราย) จึงสรุปได้ว่า <b>อัตราปฏิเสธจริงน่าจะอยู่ราว ${declLo}–${declHi}%</b> · ควรแก้การบันทึกก่อนใช้ตัวเลขนี้ตัดสินใจเรื่องใหญ่</div></div>
+    ${worstG ? `<div class="act">${own('both','จุดเจาะ')}<div>กลุ่มตำแหน่งที่ปฏิเสธสูงสุด: <b>${worstG.n}</b> ${worstG.d}/${worstG.o} (${worstG.r}%)${worstA ? ` · เขตที่ปฏิเสธสูงสุด: <b>${worstA.n}</b> ${worstA.d}/${worstA.o} (${worstA.r}%)` : ''} — เป็นจุดที่ HR และ BU ควรนั่งดูเคสร่วมกันก่อน</div></div>` : ''}
+    ${dec ? `<div style="margin:8px 0 4px;font-size:12px"><b>เหตุผลที่ไม่รับ Offer (จากหมายเหตุที่ RC บันทึก)</b> — ทราบเหตุผลชัดเจนเพียง <b>${known}/${dec.total} ราย (${pct(known,dec.total)}%)</b></div>${reasonHTML}` : ''}
+    <div style="margin-top:10px;font-weight:700;font-size:12px">🧭 แนวทางปรับปรุง (ไม่ใช่การหาคนผิด — เป็นสิ่งที่ทำร่วมกันได้)</div>
+    ${items.map(([o,t])=>`<div class="act">${o}<div>${t}</div></div>`).join('')}</div>`;
 }
 
 
@@ -969,8 +1041,8 @@ function renderPosWeekly(mx){
     tile('HC ขอ / สัปดาห์', '~'+fmtRate(hc/wk), `ขอบเขตที่เลือก · รวม ${hc} อัตรา ÷ ${wk} สัปดาห์`, 'var(--navy)'),
     tile('จ้างได้ / สัปดาห์', '~'+fmtRate(hirePW), `ขอบเขตที่เลือก · Hired ${hired} ÷ ${wk} สัปดาห์`, 'var(--green)'),
     tile('🔴 ว่างคงเหลือ', vac, `เคลียร์ครบใน ${clearWeeks(vac,hirePW)} ถ้าจ้างได้เท่าเดิม`, 'var(--red)'),
-    wf ? tile('8 สัปดาห์ล่าสุด (ทั้งบริษัท)', `ขอ ${fmtRate(wf.perWeek.last8NewReq)} · จ้าง ${fmtRate(wf.perWeek.last8Hired)}`,
-          `ต่อสัปดาห์ · เฉลี่ยทั้งปี ขอ ${fmtRate(wf.perWeek.newReq)} / จ้าง ${fmtRate(wf.perWeek.hired)}`, 'var(--teal)')
+    wf ? tile('ความเร็วล่าสุด (8 สัปดาห์ · ทั้งบริษัท)', `จ้าง ${fmtRate(wf.perWeek.last8Hired)} / ขอ ${fmtRate(wf.perWeek.last8NewReq)}`,
+          `${wf.perWeek.last8Hired >= wf.perWeek.last8NewReq ? '✅ จ้างได้มากกว่าที่ขอเข้ามา อัตราว่างกำลังลดลง' : '⚠️ ขอเข้ามามากกว่าจ้างได้ อัตราว่างกำลังเพิ่ม'} · ทั้งปีเฉลี่ย จ้าง ${fmtRate(wf.perWeek.hired)} / ขอ ${fmtRate(wf.perWeek.newReq)}`, 'var(--teal)')
        : tile('8 สัปดาห์ล่าสุด', '-', 'ต้องอัปเดต Apps Script (weeklyFlow)', 'var(--gray)')
   ].join('');
 
@@ -986,7 +1058,7 @@ function renderPosWeekly(mx){
       <span style="font-size:9px;min-width:46px;text-align:right"><b style="color:var(--navy)">${w.newReq}</b> / <b style="color:var(--green)">${w.hired}</b></span></div>`).join('');
     const gap = wf.perWeek.last8Hired - wf.perWeek.last8NewReq;
     insight = gap >= 0
-      ? `<div class="vac-chip zero" style="display:inline-block;margin-top:6px">✅ 8 สัปดาห์ล่าสุดจ้างได้เร็วกว่าขอเข้ามา (+${fmtRate(gap)}/สัปดาห์) → อัตราว่างค่อยๆ ลดลง</div>`
+      ? `<div class="vac-chip zero" style="display:inline-block;margin-top:6px">✅ 8 สัปดาห์ล่าสุดจ้างได้เร็วกว่าขอเข้ามา (+${fmtRate(gap)}/สัปดาห์) → อัตราว่างทั้งบริษัท ${(RAW.kpi||{}).totalVacancies||0} อัตรา ค่อยๆ ลดลง${gap>0.2 && (RAW.kpi||{}).totalVacancies>0 ? ` · ถ้าคงความเร็วนี้ ~${Math.max(1,Math.round(RAW.kpi.totalVacancies/gap))} สัปดาห์` : ''}</div>`
       : `<div class="vac-chip" style="display:inline-block;margin-top:6px">⚠️ 8 สัปดาห์ล่าสุดขอเข้ามาเร็วกว่าจ้างได้ (${fmtRate(-gap)}/สัปดาห์) → อัตราว่างมีแนวโน้มสะสมเพิ่ม</div>`;
   }
 
@@ -1001,7 +1073,9 @@ function renderPosWeekly(mx){
     <td style="text-align:right">${clearWeeks(a.vac,a.hired/wk)}</td></tr>`).join('');
 
   el.innerHTML = `<div class="card-title" style="margin:2px 0 8px">📆 ค่าเฉลี่ยต่อสัปดาห์ — งานสรรหาต่อเนื่อง <span style="font-weight:400;color:var(--gray)">(นับ ${wk} สัปดาห์ของปีนี้)</span></div>
-    <div class="kpi-grid kpi-grid-8" style="margin-bottom:10px">${tiles}</div>
+    <div class="kpi-grid kpi-grid-8" style="margin-bottom:6px">${tiles}</div>
+    <p style="font-size:11px;color:var(--gray);margin:0 0 10px;line-height:1.6">💬 <b>วิธีอ่าน:</b> <b>ขอ</b> = จำนวนอัตราใหม่ที่ BU ส่งใบขอเข้ามาต่อสัปดาห์ · <b>จ้าง</b> = จำนวนคนที่เริ่มงานจริงต่อสัปดาห์ · ถ้า <b>จ้าง &gt; ขอ</b> งานค้างจะค่อยๆ ลดลง ถ้า <b>ขอ &gt; จ้าง</b> งานค้างจะสะสมเพิ่ม (ตัวเลข 8 สัปดาห์ล่าสุดบอกแนวโน้มช่วงนี้ ส่วนค่าเฉลี่ยทั้งปีไว้เทียบ)</p>
+    ${wf ? `<p style="font-size:11px;color:var(--gray);margin:-6px 0 10px;line-height:1.6">📌 <b>ตอนนี้:</b> 8 สัปดาห์ล่าสุด ขอเข้า ${fmtRate(wf.perWeek.last8NewReq)} / จ้างได้ ${fmtRate(wf.perWeek.last8Hired)} ต่อสัปดาห์ ${wf.perWeek.last8Hired>=wf.perWeek.last8NewReq ? '→ จ้างทันใบขอ อัตราว่างกำลังลดลง' : '→ จ้างยังไม่ทันใบขอ อัตราว่างสะสมเพิ่ม'} · เทียบทั้งปีเฉลี่ย ขอเข้า ${fmtRate(wf.perWeek.newReq)} / จ้างได้ ${fmtRate(wf.perWeek.hired)} ต่อสัปดาห์ ${wf.perWeek.hired>=wf.perWeek.newReq ? '(ทั้งปีจ้างทันใบขอ)' : '(ทั้งปีใบขอเข้าเร็วกว่าที่จ้างทัน จึงมีอัตราค้างสะสมมา)'}</p>` : ''}
     <div class="row3" style="margin-bottom:12px">
       <div>
         <p class="fn-sub">ขอเข้ามา <span style="color:var(--navy)">■</span> vs จ้างได้ <span style="color:var(--green)">■</span> รายสัปดาห์ (อัตรา · ทั้งบริษัท · 12 สัปดาห์ล่าสุด)</p>
@@ -1013,6 +1087,55 @@ function renderPosWeekly(mx){
           <th style="text-align:right">ว่าง</th><th style="text-align:right">เคลียร์ใน</th></tr></thead><tbody>${areaRows}</tbody></table>
       </div>
     </div>`;
+  renderPosActions(mx, wk, wf);
+}
+
+// ═══ 💡 Insight หน้า 2: แนวทางทำงานร่วม HR × BU (สร้างจากตัวเลขในขอบเขตที่เลือก) ═══
+function renderPosActions(mx, wk, wf){
+  const el = document.getElementById('posActions'); if(!el) return;
+  const bad = x => !isFinite(x);
+  const pm = {}, am = {};
+  mx.forEach(r=>{
+    const p = pm[r.position] || (pm[r.position] = {name:r.position, hc:0, hired:0, vac:0, repl:0});
+    p.hc += r.hcReq||0; p.hired += r.hired||0; p.vac += r.vacancies||0;
+    if(isReplaceType(r.type)) p.repl += r.hcReq||0;
+    const a = am[r.location] || (am[r.location] = {name:r.location, vac:0, hc:0});
+    a.vac += r.vacancies||0; a.hc += r.hcReq||0;
+  });
+  const pos = Object.values(pm), areas = Object.values(am);
+  const totVac = pos.reduce((a,p)=>a+p.vac,0);
+  const items = [];
+  const nm = n => String(n||'').replace('เขตพื้นที่','');
+  const own = (cls, t) => `<span class="own ${cls}">${t}</span>`;
+
+  // 1) แนวโน้มความเร็ว
+  if(wf){
+    const gap = wf.perWeek.last8Hired - wf.perWeek.last8NewReq;
+    items.push(gap>=0
+      ? [own('both','HR + BU'), `ช่วง 8 สัปดาห์ล่าสุดจ้างได้ ${fmtRate(wf.perWeek.last8Hired)} คน/สัปดาห์ เร็วกว่าใบขอใหม่ ${fmtRate(wf.perWeek.last8NewReq)} อัตรา/สัปดาห์ — <b>รักษาจังหวะนี้ไว้</b> และใช้ช่วงที่ใบขอเข้าน้อยเคลียร์อัตราค้างเก่าให้หมด`]
+      : [own('both','HR + BU'), `ช่วง 8 สัปดาห์ล่าสุดใบขอใหม่ ${fmtRate(wf.perWeek.last8NewReq)}/สัปดาห์ มากกว่าที่จ้างได้ ${fmtRate(wf.perWeek.last8Hired)}/สัปดาห์ — <b>ชวน BU คุยลำดับความสำคัญ</b> ว่าอัตราไหนต้องการก่อน เพื่อใช้แรงสรรหาให้ตรงจุด`]);
+  }
+  // 2) เขตที่ว่างมากสุด
+  const topA = areas.filter(a=>a.vac>0).sort((a,b)=>b.vac-a.vac)[0];
+  if(topA && totVac>0){
+    items.push([own('both','HR + BU เขต'), `<b>${nm(topA.name)}</b> มีอัตราว่างมากสุด ${topA.vac} อัตรา (${Math.round(topA.vac/totVac*100)}% ของที่ว่าง) — แนะนำ <b>นัดสัมภาษณ์ประจำสัปดาห์ (fixed slot)</b> วันเดิมเวลาเดิม และคุยสถานะ 15 นาทีกับผู้จัดการเขต ลดเวลารอคิวนัด`]);
+  }
+  // 3) ตำแหน่งวนรับต่อเนื่อง
+  const cont = pos.filter(p=>p.hc>=5 && p.repl/p.hc>=0.6).sort((a,b)=>b.hc-a.hc).slice(0,2);
+  if(cont.length){
+    items.push([own('hr','HR'), `<b>${cont.map(p=>p.name).join(' / ')}</b> เป็นตำแหน่งที่ต้องรับต่อเนื่อง (ทดแทน ${cont.map(p=>Math.round(p.repl/p.hc*100)+'%').join(' / ')}) — เปิดประกาศ <b>แบบ Always-on</b> + เก็บ <b>Talent Pool</b> ผู้ผ่านสัมภาษณ์แต่ยังไม่มีอัตรา เพื่อเรียกใช้ทันทีเมื่อมีคนลาออก`]);
+    items.push([own('bu','BU'), `ช่วยแจ้ง HR <b>ล่วงหน้า</b> เมื่อทราบว่ามีพนักงานตำแหน่งนี้จะลาออก/ย้าย (แม้ยังไม่ส่งใบขอ) HR จะได้เริ่มคัดตัวสำรองก่อนวันว่างจริง`]);
+  }
+  // 4) ตำแหน่งเติมยาก
+  const hard = pos.filter(p=>p.vac>0 && (p.hired<=0 || (p.hired/wk>0 && p.vac/(p.hired/wk)>12))).sort((a,b)=>b.vac-a.vac).slice(0,3);
+  if(hard.length){
+    items.push([own('both','HR + BU'), `ตำแหน่งที่ใช้เวลาเติมนาน: <b>${hard.map(p=>`${p.name} (ว่าง ${p.vac})`).join(', ')}</b> — นั่งทบทวนร่วมกัน 3 เรื่อง: <b>JD/คุณสมบัติ</b> เข้มเกินจริงหรือไม่ · <b>ช่องทางประกาศ</b> ตรงกลุ่มหรือไม่ · <b>ข้อเสนอ</b> เทียบตลาด/ตำแหน่งใกล้เคียงในบริษัท`]);
+  }
+  // 5) จังหวะรายงาน
+  items.push([own('hr','HR'), `ส่งสรุปหน้านี้ให้ผู้จัดการเขต <b>ทุกวันจันทร์</b> (1 หน้า) และกลับมาดูซ้ำสัปดาห์ถัดไป — ใช้ "เคลียร์ว่างใน ≈N สัปดาห์" เป็นตัวชี้ว่าเขต/ตำแหน่งไหนควรเพิ่มแรงก่อน`]);
+
+  el.innerHTML = `<div class="act-card"><h4>💡 Insight & แนวทางทำงานร่วม HR × BU <span style="font-weight:400;color:var(--gray)">(ตามขอบเขตที่เลือกด้านบน)</span></h4>
+    ${items.map(([o,t])=>`<div class="act">${o}<div>${t}</div></div>`).join('')}</div>`;
 }
 
 // ═══════════════════════════════════════════════════════════
