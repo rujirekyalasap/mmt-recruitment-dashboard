@@ -597,7 +597,7 @@ function renderAll(){
 }
 
 // ── บรรทัดวินิจฉัย (ท้ายหน้า): บอกว่าเว็บเวอร์ชันไหน ต่อ Apps Script ลิงก์ไหน และ API ส่งอะไรมาบ้าง ──
-const HTML_VERSION = 'R9 · 11/11/2026';
+const HTML_VERSION = 'R10 · 11/11/2026';
 function renderDiag(){
   let d = document.getElementById('diagLine');
   if(!d){ d = document.createElement('div'); d.id='diagLine';
@@ -1040,7 +1040,7 @@ function renderPosWeekly(mx){
   const tiles = [
     tile('HC ขอ / สัปดาห์', '~'+fmtRate(hc/wk), `ขอบเขตที่เลือก · รวม ${hc} อัตรา ÷ ${wk} สัปดาห์`, 'var(--navy)'),
     tile('จ้างได้ / สัปดาห์', '~'+fmtRate(hirePW), `ขอบเขตที่เลือก · Hired ${hired} ÷ ${wk} สัปดาห์`, 'var(--green)'),
-    tile('🔴 ว่างคงเหลือ', vac, `เคลียร์ครบใน ${clearWeeks(vac,hirePW)} ถ้าจ้างได้เท่าเดิม`, 'var(--red)'),
+    tile('🔴 ว่างคงเหลือ', vac, `จาก ${hc-(sum('hold')||0)} อัตราที่เปิดสรรหา (ไม่รวม Hold)`, 'var(--red)'),
     wf ? tile('ความเร็วล่าสุด (8 สัปดาห์ · ทั้งบริษัท)', `จ้าง ${fmtRate(wf.perWeek.last8Hired)} / ขอ ${fmtRate(wf.perWeek.last8NewReq)}`,
           `${wf.perWeek.last8Hired >= wf.perWeek.last8NewReq ? '✅ จ้างได้มากกว่าที่ขอเข้ามา อัตราว่างกำลังลดลง' : '⚠️ ขอเข้ามามากกว่าจ้างได้ อัตราว่างกำลังเพิ่ม'} · ทั้งปีเฉลี่ย จ้าง ${fmtRate(wf.perWeek.hired)} / ขอ ${fmtRate(wf.perWeek.newReq)}`, 'var(--teal)')
        : tile('8 สัปดาห์ล่าสุด', '-', 'ต้องอัปเดต Apps Script (weeklyFlow)', 'var(--gray)')
@@ -1058,7 +1058,7 @@ function renderPosWeekly(mx){
       <span style="font-size:9px;min-width:46px;text-align:right"><b style="color:var(--navy)">${w.newReq}</b> / <b style="color:var(--green)">${w.hired}</b></span></div>`).join('');
     const gap = wf.perWeek.last8Hired - wf.perWeek.last8NewReq;
     insight = gap >= 0
-      ? `<div class="vac-chip zero" style="display:inline-block;margin-top:6px">✅ 8 สัปดาห์ล่าสุดจ้างได้เร็วกว่าขอเข้ามา (+${fmtRate(gap)}/สัปดาห์) → อัตราว่างทั้งบริษัท ${(RAW.kpi||{}).totalVacancies||0} อัตรา ค่อยๆ ลดลง${gap>0.2 && (RAW.kpi||{}).totalVacancies>0 ? ` · ถ้าคงความเร็วนี้ ~${Math.max(1,Math.round(RAW.kpi.totalVacancies/gap))} สัปดาห์` : ''}</div>`
+      ? `<div class="vac-chip zero" style="display:inline-block;margin-top:6px">✅ 8 สัปดาห์ล่าสุดจ้างได้เร็วกว่าขอเข้ามา (+${fmtRate(gap)}/สัปดาห์) → อัตราว่างทั้งบริษัท ${(RAW.kpi||{}).totalVacancies||0} อัตรา ค่อยๆ ลดลง</div>`
       : `<div class="vac-chip" style="display:inline-block;margin-top:6px">⚠️ 8 สัปดาห์ล่าสุดขอเข้ามาเร็วกว่าจ้างได้ (${fmtRate(-gap)}/สัปดาห์) → อัตราว่างมีแนวโน้มสะสมเพิ่ม</div>`;
   }
 
@@ -1069,8 +1069,7 @@ function renderPosWeekly(mx){
   const areaRows = Object.entries(am).sort((a,b)=>b[1].hc-a[1].hc).map(([name,a])=>`<tr>
     <td><b>${name.replace('เขตพื้นที่','')}</b></td>
     <td style="text-align:right">${fmtRate(a.hc/wk)}</td><td style="text-align:right;color:var(--green);font-weight:600">${fmtRate(a.hired/wk)}</td>
-    <td style="text-align:right;color:${a.vac>0?'var(--red)':'var(--gray)'};font-weight:600">${a.vac}</td>
-    <td style="text-align:right">${clearWeeks(a.vac,a.hired/wk)}</td></tr>`).join('');
+    <td style="text-align:right;color:${a.vac>0?'var(--red)':'var(--gray)'};font-weight:600">${a.vac}</td></tr>`).join('');
 
   el.innerHTML = `<div class="card-title" style="margin:2px 0 8px">📆 ค่าเฉลี่ยต่อสัปดาห์ — งานสรรหาต่อเนื่อง <span style="font-weight:400;color:var(--gray)">(นับ ${wk} สัปดาห์ของปีนี้)</span></div>
     <div class="kpi-grid kpi-grid-8" style="margin-bottom:6px">${tiles}</div>
@@ -1084,7 +1083,7 @@ function renderPosWeekly(mx){
       <div style="overflow-x:auto">
         <p class="fn-sub">แยกตามเขต (ขอบเขตที่เลือก)</p>
         <table><thead><tr><th>เขต/พื้นที่</th><th style="text-align:right">ขอ/สัปดาห์</th><th style="text-align:right">จ้าง/สัปดาห์</th>
-          <th style="text-align:right">ว่าง</th><th style="text-align:right">เคลียร์ใน</th></tr></thead><tbody>${areaRows}</tbody></table>
+          <th style="text-align:right">ว่าง</th></tr></thead><tbody>${areaRows}</tbody></table>
       </div>
     </div>`;
   renderPosActions(mx, wk, wf);
@@ -1129,10 +1128,10 @@ function renderPosActions(mx, wk, wf){
   // 4) ตำแหน่งเติมยาก
   const hard = pos.filter(p=>p.vac>0 && (p.hired<=0 || (p.hired/wk>0 && p.vac/(p.hired/wk)>12))).sort((a,b)=>b.vac-a.vac).slice(0,3);
   if(hard.length){
-    items.push([own('both','HR + BU'), `ตำแหน่งที่ใช้เวลาเติมนาน: <b>${hard.map(p=>`${p.name} (ว่าง ${p.vac})`).join(', ')}</b> — นั่งทบทวนร่วมกัน 3 เรื่อง: <b>JD/คุณสมบัติ</b> เข้มเกินจริงหรือไม่ · <b>ช่องทางประกาศ</b> ตรงกลุ่มหรือไม่ · <b>ข้อเสนอ</b> เทียบตลาด/ตำแหน่งใกล้เคียงในบริษัท`]);
+    items.push([own('both','HR + BU'), `ตำแหน่งที่ยังมีอัตราว่างค้างและจ้างได้ช้า: <b>${hard.map(p=>`${p.name} (ว่าง ${p.vac})`).join(', ')}</b> — นั่งทบทวนร่วมกัน 3 เรื่อง: <b>JD/คุณสมบัติ</b> เข้มเกินจริงหรือไม่ · <b>ช่องทางประกาศ</b> ตรงกลุ่มหรือไม่ · <b>ข้อเสนอ</b> เทียบตลาด/ตำแหน่งใกล้เคียงในบริษัท`]);
   }
   // 5) จังหวะรายงาน
-  items.push([own('hr','HR'), `ส่งสรุปหน้านี้ให้ผู้จัดการเขต <b>ทุกวันจันทร์</b> (1 หน้า) และกลับมาดูซ้ำสัปดาห์ถัดไป — ใช้ "เคลียร์ว่างใน ≈N สัปดาห์" เป็นตัวชี้ว่าเขต/ตำแหน่งไหนควรเพิ่มแรงก่อน`]);
+  items.push([own('hr','HR'), `ส่งสรุปหน้านี้ให้ผู้จัดการเขต <b>ทุกวันจันทร์</b> (1 หน้า) และกลับมาดูซ้ำสัปดาห์ถัดไป — ดูจากอัตราว่างคงเหลือและ "จ้าง/สัปดาห์" ว่าเขต/ตำแหน่งไหนควรเพิ่มแรงก่อน`]);
 
   el.innerHTML = `<div class="act-card"><h4>💡 Insight & แนวทางทำงานร่วม HR × BU <span style="font-weight:400;color:var(--gray)">(ตามขอบเขตที่เลือกด้านบน)</span></h4>
     ${items.map(([o,t])=>`<div class="act">${o}<div>${t}</div></div>`).join('')}</div>`;
@@ -1208,10 +1207,7 @@ function renderFunVacStrip(f){
   const chips = grp.length ? `<div class="vac-chips"><span style="font-size:10px;color:var(--gray)">ว่างแยกตามกลุ่มตำแหน่ง:</span>
     ${grp.map(g=>`<span class="vac-chip ${g.vacancies>0?'':'zero'}">${g.group} ${g.vacancies}</span>`).join('')}</div>` : '';
   const perWk = f.weeksElapsed>0 ? (k.totalHired||0)/f.weeksElapsed : 0;
-  const extra = (t.vac>0 && perWk>0)
-    ? `<div style="font-size:10px;color:var(--gray);margin-top:8px">
-        ที่ความเร็วจ้างเฉลี่ยปีนี้ ~<b>${Math.round(perWk)}</b> คน/สัปดาห์ → เติมอัตราว่างที่เหลือครบในประมาณ <b>${Math.max(1,Math.round(t.vac/perWk))}</b> สัปดาห์
-        (ประมาณการ ถ้าไม่มีใบงานใหม่เพิ่ม)</div>` : '';
+  const extra = '';
   el.innerHTML = vacStripHTML('สรุปอัตราว่างคงเหลือ — ทั้งบริษัท', 'ภาพรวมทั้งปี ไม่ขึ้นกับ Filter', t, chips, extra);
 }
 
@@ -1332,7 +1328,7 @@ function renderPositionBranch(){
       <th>ตำแหน่งงาน</th><th style="text-align:right">HC ขอ</th><th style="text-align:right">สัดส่วนงานสรรหา</th>
       <th style="text-align:right">Hired</th><th style="text-align:right">ว่าง</th>
       <th>Fill %</th><th>% วนรับ (ทดแทน)</th><th style="text-align:right">Avg Days</th>
-      <th style="text-align:right" title="HC ขอ ÷ จำนวนสัปดาห์ที่ผ่านมาของปี">ขอ/สัปดาห์</th><th style="text-align:right" title="Hired ÷ จำนวนสัปดาห์ที่ผ่านมาของปี">จ้าง/สัปดาห์</th><th style="text-align:right" title="อัตราว่าง ÷ ความเร็วจ้างต่อสัปดาห์ของตำแหน่งนั้น">เคลียร์ว่างใน</th><th>การสรรหา</th>
+      <th style="text-align:right" title="HC ขอ ÷ จำนวนสัปดาห์ที่ผ่านมาของปี">ขอ/สัปดาห์</th><th style="text-align:right" title="Hired ÷ จำนวนสัปดาห์ที่ผ่านมาของปี">จ้าง/สัปดาห์</th><th>การสรรหา</th>
     </tr></thead><tbody>
     ${list.map(p=>{
       const fillC = p.fill>=80?'var(--green)':p.fill>=60?'var(--amber)':'var(--red)';
@@ -1340,8 +1336,7 @@ function renderPositionBranch(){
       const hp = p.hired/wk, cw = p.vac>0 ? (hp>0 ? p.vac/hp : Infinity) : 0;
       const tags = [];
       if(p.hc>=5 && p.repPct>=60) tags.push('<span class="bdg bdg-teal">🔁 รับต่อเนื่อง</span>');
-      if(p.vac>0) tags.push(cw>12 ? '<span class="bdg bdg-amber" title="อัตราว่างคงเหลือ ÷ ความเร็วจ้างปัจจุบัน เกิน 12 สัปดาห์ — ควรเพิ่มช่องทาง/ปรับ Offer">🐢 เติมยาก</span>'
-                                   : '<span class="bdg bdg-red">🔴 มีงานค้าง</span>');
+      if(p.vac>0) tags.push('<span class="bdg bdg-red">🔴 มีงานค้าง</span>');
       if(!tags.length) tags.push('<span class="bdg bdg-green">✓ ปกติ</span>');
       const tag = tags.join(' ');
       return `<tr>
@@ -1355,7 +1350,6 @@ function renderPositionBranch(){
         <td style="text-align:right">${p.avgD||'-'}</td>
         <td style="text-align:right">${fmtRate(p.hc/wk)}</td>
         <td style="text-align:right">${fmtRate(p.hired/wk)}</td>
-        <td style="text-align:right;color:${p.vac>0?'var(--red)':'var(--gray)'}">${clearWeeks(p.vac,p.hired/wk)}</td>
         <td>${tag}</td></tr>`;
     }).join('')}</tbody>`;
 
